@@ -1290,8 +1290,9 @@ class ChangeHeadHoldoutOperator(bpy.types.Operator):
         for coll in armature.data.collections:
             if head_bone_data.name in coll.bones:
                 head_bone_collections.append(coll)
-                was_collection_visible = coll.is_visible
-                coll.is_visible = True
+                was_collection_solo = coll.is_solo
+                coll.is_solo = True
+
 
         # 刷新视图层
         context.view_layer.update()
@@ -1305,7 +1306,7 @@ class ChangeHeadHoldoutOperator(bpy.types.Operator):
         # 恢复原始可见性
         head_bone_data.hide = was_head_visible
         for coll in head_bone_collections:
-            coll.is_visible = was_collection_visible
+            coll.is_solo = was_collection_solo
 
         # 启用绝对形态键
         grid.shape_key_add(name="Basis")
