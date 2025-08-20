@@ -45,8 +45,9 @@ dictionary = {
         ("Operator", "Print Vertex Indexes"):"打印顶点索引",
         ("*", "Reduce the workload of post-production keying by blocking render"):"通过阻隔渲染降低后期抠图的工作量",
         ("Operator", "Holdout"):"阻隔",
-        ("*", "Create a new shapekey for the grid"):"为栅格新建一个形态键",
-        ("Operator", "New Shape"):"新形态",
+        ("*", "From basis"):"从基形",
+        ("*", "From active shape key"):"从活动形态键",
+        ("*", "Create a new absolute shape key:"):"创建一个新的绝对形态键：",
     }
 }
 
