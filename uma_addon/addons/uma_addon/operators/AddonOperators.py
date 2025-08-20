@@ -1279,12 +1279,33 @@ class ChangeHeadHoldoutOperator(bpy.types.Operator):
         grid.rotation_quaternion = bone_rot            
         # 移动栅格到Head骨位置
         grid.location = bone_loc - (bone_y_axis * 0.53)
+        
+        # 确保Head骨可见以便设置父级
+        head_bone_data = armature.data.bones.get('Head')
+        was_head_visible = head_bone_data.hide
+        head_bone_data.hide = False
+        
+        # 检查Head骨所在的骨骼集合的可见性
+        head_bone_collections = []
+        for coll in armature.data.collections:
+            if head_bone_data.name in coll.bones:
+                head_bone_collections.append(coll)
+                was_collection_visible = coll.is_visible
+                coll.is_visible = True
 
+        # 刷新视图层
+        context.view_layer.update()
+        
         # 设置为Head骨子级
         context.view_layer.objects.active = armature
         grid.select_set(True)
         bpy.context.object.data.bones.active = bpy.context.object.data.bones["Head"]
         bpy.ops.object.parent_set(type='BONE')
+        
+        # 恢复原始可见性
+        head_bone_data.hide = was_head_visible
+        for coll in head_bone_collections:
+            coll.is_visible = was_collection_visible
 
         # 启用绝对形态键
         grid.shape_key_add(name="Basis")
