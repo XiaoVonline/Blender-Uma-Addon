@@ -1,7 +1,7 @@
 import bpy
 
 from ..config import __addon_name__
-from ..operators.AddonOperators import BoneLayerOperator, BoneLayerResetOperator, BoneSimplifyOperator, GenerateControllerOperator, FixEyeBoneOperator, CombineShapeKeysOperator, FixBlushOperator, FixNormalsOperator, ChangeHeadPretreatmentOperator, PrintSelectedVerticesOperator, ChangeHeadHoldoutOperator
+from ..operators.AddonOperators import BoneLayerOperator, BoneLayerResetOperator, BoneSimplifyOperator, GenerateControllerOperator, FixEyeBoneOperator, CombineShapeKeysOperator, FixBlushOperator, FixNormalsOperator, ChangeHeadPretreatmentOperator, PrintSelectedVerticesOperator, ChangeHeadHoldoutOperator, ChangeHeadNewShapeOperator
 from ....common.i18n.i18n import i18n
 from ....common.types.framework import reg_order
 
@@ -59,9 +59,10 @@ class MMDtoolsAddonPanel(BasePanel, bpy.types.Panel):
         layout.operator(PrintSelectedVerticesOperator.bl_idname)
 
         layout.label(text="Change-head secondary creation:")
+        layout.operator(ChangeHeadPretreatmentOperator.bl_idname)
         split = layout.split(factor=0.5)
-        split.operator(ChangeHeadPretreatmentOperator.bl_idname)
         split.operator(ChangeHeadHoldoutOperator.bl_idname)
+        split.operator(ChangeHeadNewShapeOperator.bl_idname)        
 
         layout.label(text="Fix mini umamusume model:")
         split = layout.split(factor=0.5)

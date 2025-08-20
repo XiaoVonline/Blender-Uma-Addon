@@ -1309,3 +1309,54 @@ class ChangeHeadHoldoutOperator(bpy.types.Operator):
         context.view_layer.objects.active = context.selected_objects[0]
         self.report({'INFO'}, "Grig generated successfully")
         return {'FINISHED'}
+    
+class ChangeHeadNewShapeOperator(bpy.types.Operator):
+    '''Create a new shapekey for the grid'''
+    bl_idname = "object.uma_changeheadnewshape_ops"
+    bl_label = "New Shape"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    @classmethod
+    def poll(cls, context: bpy.types.Context):
+        return context.active_object is not None and context.active_object.type == 'MESH' and len(context.selected_objects) == 1 and context.active_object.mode == 'OBJECT' and context.active_object.data.shape_keys is not None
+
+    def execute(self, context: bpy.types.Context):
+
+        # 获取当前活动对象和活动形态键
+        obj = context.active_object
+        shape_keys = obj.data.shape_keys
+        active_index = obj.active_shape_key_index
+
+        active_key = shape_keys.key_blocks[active_index]
+        
+        # 创建新的形态键
+        new_key = obj.shape_key_add()
+        
+        # 直接复制顶点数据
+        mesh = obj.data
+        vertices = mesh.vertices
+        
+        # 获取基础形态键的坐标
+        basis_key = shape_keys.key_blocks[0] if shape_keys.key_blocks else None
+        
+        # 复制顶点数据
+        for i, vert in enumerate(vertices):
+            if active_key.data[i].co != basis_key.data[i].co:
+                # 绝对形态键的变形数据
+                new_key.data[i].co = active_key.data[i].co.copy()
+            else:
+                # 如果顶点没有变形，使用基础坐标
+                new_key.data[i].co = basis_key.data[i].co.copy()
+
+        obj.active_shape_key_index = len(shape_keys.key_blocks) - 1
+
+        # 将估算时刻设为新形态键的frame值
+        shape_keys.eval_time = new_key.frame
+
+        # 将估算时刻注册一个关键帧
+        shape_keys.keyframe_insert(data_path="eval_time")
+
+        # 切换到编辑模式
+        bpy.ops.object.mode_set(mode='EDIT')        
+        self.report({'INFO'}, f"New shapekey generated successfully with eval_time set to {new_key.frame}")
+        return {'FINISHED'}
