@@ -2,15 +2,8 @@ from .addons.uma_addon import register as addon_register, unregister as addon_un
 
 bl_info = {
     "name": 'UMA Addon',
-    "author": '小微在线上',
-    "blender": (4, 5, 1),
-    "version": (0, 0, 1),
-    "description": '',
-    "warning": '',
-    "doc_url": '',
-    "tracker_url": '',
-    "support": 'COMMUNITY',
-    "category": 'Object'
+    "blender": (4, 2, 0),
+    "tracker_url": 'https://www.bilibili.com/opus/1101994702993883141'
 }
 
 def register():

@@ -1,76 +1,55 @@
 import bpy
 
 from ..config import __addon_name__
-from ..operators.AddonOperators import BoneLayerOperator, BoneLayerResetOperator, BoneSimplifyOperator, GenerateControllerOperator, FixEyeBoneOperator, CombineShapeKeysOperator, FixBlushOperator, FixNormalsOperator, ChangeHeadPretreatmentOperator, PrintSelectedVerticesOperator, ChangeHeadHoldoutOperator,ChangeHeadCopyShapeOperator, ChangeHeadNewShapeOperator
+from ..operators.AddonOperators import SetBoneCollections, SimplifyArmature, RefineBoneStructure, FixBlushOperator, FixNormalsOperator, ChangeHeadPretreat, ChangeHeadHoldout, ChangeHeadCopyShapeOperator, ChangeHeadNewShapeOperator
+from ..operators.AddonOperators2 import BuildTwistConstraints, ClearTwistConstraints
+from ..operators.GenerateController import GenerateIK, BakeFKtoIK
+# from ..operators.Physics import DampedTrackProperties
 from ....common.i18n.i18n import i18n
 from ....common.types.framework import reg_order
+from ..utils.Config_handling import get_panel_name
 
 class BasePanel(object):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
+    bl_category = get_panel_name()
 
     @classmethod
     def poll(cls, context: bpy.types.Context):
         return True
-
 
 @reg_order(0)
-class MMRAddonPanel(BasePanel, bpy.types.Panel):
-    bl_label = "UMA Addon Panel"
-    bl_idname = "MMR_SCENE_PT_sample"
-    bl_category = "MMR"
+class AddonPanel(BasePanel, bpy.types.Panel):
+    bl_label = "UMA Addon"
+    bl_idname = "SCENE_PT_umaaddonpanel"
 
     def draw(self, context: bpy.types.Context):
         layout = self.layout
-
-        layout.operator(GenerateControllerOperator.bl_idname)
 
     @classmethod
     def poll(cls, context: bpy.types.Context):
         return True
 
-class MMDtoolsAddonPanel(BasePanel, bpy.types.Panel):
-    bl_label = "UMA Addon Panel"
-    bl_idname = "MMD_SCENE_PT_sample"
-    bl_category = "MMD"
+@reg_order(1)
+class ModelProcessPanel(BasePanel, bpy.types.Panel):
+    bl_label = "Processing Model"
+    bl_idname = "SCENE_PT_umaaddonpanel1"
+    bl_parent_id = "SCENE_PT_umaaddonpanel"
 
     def draw(self, context: bpy.types.Context):
         layout = self.layout
 
-        split = layout.split(factor=0.7)
-        split.operator(BoneLayerOperator.bl_idname)
-        split.operator(BoneLayerResetOperator.bl_idname)
-
-        layout.operator(FixEyeBoneOperator.bl_idname)
-
-        layout.operator(CombineShapeKeysOperator.bl_idname)
-
-        box = layout.box()
-        box.label(text="Delete Selected Collections:")
-        row = box.row()
-        row.prop(context.scene, "delete_handle_collection", text="handle")
-        row.prop(context.scene, "delete_face_collection", text="face")
-        row.prop(context.scene, "delete_others_collection", text="others")
-
-        box.operator(BoneSimplifyOperator.bl_idname)        
-        box.label(text="Only works on umamusume skeletons layered by this plugin", icon="ERROR")
-        box.label(text="Please remove the bones you want to keep from the selected collection", icon="ERROR")
-
-        layout.operator(PrintSelectedVerticesOperator.bl_idname)
-
-        layout.label(text="Change-head secondary creation:")
-        box1 = layout.box()
-        row = box1.row()
-        row.operator(ChangeHeadPretreatmentOperator.bl_idname)
-        row.operator(ChangeHeadHoldoutOperator.bl_idname)
-        box1.label(text="Create a new absolute shape key:")
-        row = box1.row()
-        row.operator(ChangeHeadNewShapeOperator.bl_idname)        
-        row.operator(ChangeHeadCopyShapeOperator.bl_idname)     
-
+        split = layout.split(factor=0.5)
+        split.operator(SetBoneCollections.bl_idname)
+        split.operator(RefineBoneStructure.bl_idname)
+        row = layout.row(align=True)
+        row.prop(context.scene, "del_handle", toggle=True)
+        row.prop(context.scene, "del_face", toggle=True)
+        row.prop(context.scene, "del_others", toggle=True)
+        row.operator(SimplifyArmature.bl_idname)
+        
         layout.label(text="Fix mini umamusume model:")
-        box2 = layout.box()
-        split = box2.split(factor=0.5)
+        split = layout.split(factor=0.5)
         split.operator(FixBlushOperator.bl_idname)
         split.operator(FixNormalsOperator.bl_idname)
 
@@ -78,13 +57,64 @@ class MMDtoolsAddonPanel(BasePanel, bpy.types.Panel):
     def poll(cls, context: bpy.types.Context):
         return True
 
-# This panel will be drawn after ExampleAddonPanel since it has a higher order value
-# @reg_order(1)
-# class ExampleAddonPanel2(BasePanel, bpy.types.Panel):
-#     bl_label = "Example Addon Side Bar Panel"
-#     bl_idname = "SCENE_PT_sample2"
+@reg_order(2)
+class ControllerPanel(BasePanel, bpy.types.Panel):
+    bl_label = "Controller"
+    bl_idname = "SCENE_PT_umaaddonpanel2"
+    bl_parent_id = "SCENE_PT_umaaddonpanel"
 
-#     def draw(self, context: bpy.types.Context):
-#         layout = self.layout
-#         layout.label(text="Second Panel")
-#         layout.operator(BoneLayerOperator.bl_idname)
+    def draw(self, context: bpy.types.Context):
+        layout = self.layout
+
+        if getattr(getattr(context.active_object, "uma_controller", None), "auto_twist_bones", False):
+            layout.operator(ClearTwistConstraints.bl_idname, text="Auto Twist", depress=True)
+        else:
+            layout.operator(BuildTwistConstraints.bl_idname, text="Auto Twist",  depress=False)
+
+        layout.operator(GenerateIK.bl_idname, icon='BONE_DATA')
+        layout.operator(BakeFKtoIK.bl_idname, icon='SNAP_ON')
+
+    @classmethod
+    def poll(cls, context: bpy.types.Context):
+        return True
+
+@reg_order(3)
+class ChangeHeadPanel(BasePanel, bpy.types.Panel):
+    bl_label = "Change Head"
+    bl_idname = "SCENE_PT_umaaddonpanel3"
+    bl_parent_id = "SCENE_PT_umaaddonpanel"
+
+    def draw(self, context: bpy.types.Context):
+        layout = self.layout
+        
+        row = layout.row()
+        row.operator(ChangeHeadPretreat.bl_idname)
+        row.operator(ChangeHeadHoldout.bl_idname)
+        layout.label(text="Create a new absolute shape key:")
+        row = layout.row()
+        row.operator(ChangeHeadNewShapeOperator.bl_idname)        
+        row.operator(ChangeHeadCopyShapeOperator.bl_idname)
+
+    @classmethod
+    def poll(cls, context: bpy.types.Context):
+        return True
+
+@reg_order(4)
+class PhysicsPanel(BasePanel, bpy.types.Panel):
+    bl_label = "Physics"
+    bl_idname = "SCENE_PT_umaaddonpanel4"
+    bl_parent_id = "SCENE_PT_umaaddonpanel"
+
+    def draw(self, context: bpy.types.Context):
+        layout = self.layout
+        
+        props = context.scene.damped_track
+        row = layout.row(align=True)
+        row.prop(props, "ear_enable", toggle=True, text="Ear")
+        row.prop(props, "bust_enable", toggle=True, text="Bust")
+        row.prop(props, "tail_enable", toggle=True, text="Tail")
+
+    @classmethod
+    def poll(cls, context: bpy.types.Context):
+        return context.active_object and context.active_object.type == 'ARMATURE'
+    

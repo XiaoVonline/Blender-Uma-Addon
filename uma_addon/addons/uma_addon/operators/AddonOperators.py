@@ -6,246 +6,222 @@ import bmesh
 from mathutils import Vector
 
 from ..config import __addon_name__
-# from ..preference.AddonPreferences import ExampleAddonPreferences
+# from ..preference.AddonPreferences import AddonPreferences
 
-class BoneLayerOperator(bpy.types.Operator):
+from ..utils.Utils import assign_bone_to_collection
+
+class SetBoneCollections(bpy.types.Operator):
     '''Layer the umamusume skeleton'''
-    # 唯一的操作标识符，用于找到和调用这个操作
-    bl_idname = "object.uma_bonelayer_ops"
-    # 操作的显示名称 
-    bl_label = "Set Armature Layers"
-    # 确保在操作之前备份数据，用户撤销操作时可以恢复
+    bl_idname = "uma.set_bone_collections"
+    bl_label = "Set Bone Collections"
     bl_options = {'REGISTER', 'UNDO'}
 
-    # 操作的前提条件
     @classmethod
     def poll(cls, context: bpy.types.Context):
         # 检查当前上下文是否有选中的对象，并且该对象是骨架类型
-        return context.active_object is not None and context.active_object.type == 'ARMATURE' and len(context.selected_objects) == 1
+        return context.active_object and context.active_object.type == 'ARMATURE' and len(context.selected_objects) == 1
 
-    # 执行操作的具体方法
     def execute(self, context: bpy.types.Context):
 
-        # 获取当前骨架对象和数据
-        armature_obj = context.active_object
-        armature_data = armature_obj.data
+        obj = context.active_object
+        current_mode = obj.mode
+        if current_mode == 'EDIT':
+            bpy.ops.object.mode_set(mode='OBJECT')
+
+        # 创建名为"Root"的骨骼集合
+        bones_name = {"Position"}
+        root_count = 0
+        for n in bones_name:
+            if assign_bone_to_collection(obj, n,'Root'):
+                root_count += 1
+        # 设置集合为不可见
+        obj.data.collections.get('Root').is_visible = False
 
         # 创建名为"Body"的骨骼集合
-        collection = armature_data.collections.get("Body")
-        if not collection:
-            collection = armature_data.collections.new("Body")        
         bones_name = {"Eye_L", "Eye_R", "Head", "Neck", "Chest", "Spine", "Waist", "UpBody_Ctrl", "Hip"}
-        bones = [bone for bone in armature_data.bones if bone.name in bones_name]
         body_count = 0
-        for bone in bones:
-            collection.assign(bone)
-            body_count += 1
-        if body_count == 0:
-            armature_data.collections.remove(collection)
+        for n in bones_name:
+            if assign_bone_to_collection(obj, n,'Body'):
+                body_count += 1
 
         # 创建名为"Arm"的骨骼集合
-        collection = armature_data.collections.get("Arm")
-        if not collection:
-            collection = armature_data.collections.new("Arm")        
-        bones_name = {"Shoulder_L", "Shoulder_R", "Arm_L", "Arm_R", "ShoulderRoll_L", "ShoulderRoll_R", "ArmRoll_L", "ArmRoll_R", "Elbow_L", "Elbow_R", "Wrist_L", "Wrist_R"}
-        bones = [bone for bone in armature_data.bones if bone.name in bones_name]
+        bones_name = {"Shoulder_L", "Shoulder_R", "Arm_L", "Arm_R", "ShoulderRoll_L", "ShoulderRoll_R", "ArmRoll_L", "ArmRoll_R", "Elbow_L", "Elbow_R", "Wrist_L", "Wrist_R", "Hand_Attach_L", "Hand_Attach_R"}
         arm_count = 0
-        for bone in bones:
-            collection.assign(bone)
-            arm_count += 1
-        if arm_count == 0:
-            armature_data.collections.remove(collection)
+        for n in bones_name:
+            if assign_bone_to_collection(obj, n,'Arm'):
+                arm_count += 1
 
         # 创建名为"Leg"的骨骼集合
-        collection = armature_data.collections.get("Leg")
-        if not collection:
-            collection = armature_data.collections.new("Leg")
         bones_name = {"Thigh_L", "Thigh_R", "Knee_L", "Knee_R", "Ankle_L", "Ankle_R", "Ankle_offset_L", "Ankle_offset_R", "Toe_L", "Toe_R", "Toe_offset_L", "Toe_offset_R"}
-        bones = [bone for bone in armature_data.bones if bone.name in bones_name]
         leg_count = 0
-        for bone in bones:
-            collection.assign(bone)
-            leg_count += 1
-        if leg_count == 0:
-            armature_data.collections.remove(collection)
+        for n in bones_name:
+            if assign_bone_to_collection(obj, n,'Leg'):
+                leg_count += 1
 
         # 创建名为"Finger"的骨骼集合
-        collection = armature_data.collections.get("Finger")
-        if not collection:
-            collection = armature_data.collections.new("Finger")
         bones_name = {"Thumb_01_L", "Thumb_02_L", "Thumb_03_L", "Index_01_L", "Index_02_L", "Index_03_L", "Middle_01_L", "Middle_02_L", "Middle_03_L", "Ring_01_L", "Ring_02_L", "Ring_03_L", "Pinky_01_L", "Pinky_02_L", "Pinky_03_L", "Thumb_01_R", "Thumb_02_R", "Thumb_03_R", "Index_01_R", "Index_02_R", "Index_03_R", "Middle_01_R", "Middle_02_R", "Middle_03_R", "Ring_01_R", "Ring_02_R", "Ring_03_R", "Pinky_01_R", "Pinky_02_R", "Pinky_03_R"}
-        bones = [bone for bone in armature_data.bones if bone.name in bones_name]
         finger_count = 0
-        for bone in bones:
-            collection.assign(bone)
-            finger_count += 1
-        if finger_count == 0:
-            armature_data.collections.remove(collection)
+        for n in bones_name:
+            if assign_bone_to_collection(obj, n,'Finger'):
+             finger_count += 1
 
         # 创建名为"Hair"的骨骼集合
-        collection = armature_data.collections.get("Hair")
+        data = obj.data
+        collection = data.collections.get("Hair")
         if not collection:
-            collection = armature_data.collections.new("Hair")
+            collection = data.collections.new("Hair")
         # 设置集合为不可见
         collection.is_visible = False  
         # 查找所有名称中含"Tali"且不以"Handle"结尾的骨骼
-        bones = [bone for bone in armature_data.bones if "Hair" in bone.name and not bone.name.endswith("Handle")]
+        bones = [bone for bone in data.bones if "Hair" in bone.name and not bone.name.endswith("Handle")]
         hair_count = len(bones)
         for bone in bones:
             collection.assign(bone)
-        if hair_count == 0:
-            armature_data.collections.remove(collection)
-
-        # 创建名为"Phys"的骨骼集合
-        collection = armature_data.collections.get("Phys")
-        if not collection:
-            collection = armature_data.collections.new("Phys")
-        # 设置集合为不可见
-        collection.is_visible = False  
-        # 查找所有名称中含"Sp_"且不以"Handle"结尾不以"Sp_He_Ear"和"Sp_He_Hair"开头的骨骼
-        bones = [bone for bone in armature_data.bones if "Sp_" in bone.name and not bone.name.endswith("Handle") and not bone.name.startswith("Sp_He_Ear") and not bone.name.startswith("Sp_He_Hair")]
-        phys_count = len(bones)
-        for bone in bones:
-            collection.assign(bone)
-        if phys_count == 0:
-            armature_data.collections.remove(collection)
 
         # 创建名为"Tail"的骨骼集合
-        collection = armature_data.collections.get("Tail")
+        collection = data.collections.get("Tail")
         if not collection:
-            collection = armature_data.collections.new("Tail")
+            collection = data.collections.new("Tail")
+        # 设置集合为不可见
+        collection.is_visible = False  
         # 查找所有名称中含"Tali"且不以"Handle"结尾的骨骼
-        bones = [bone for bone in armature_data.bones if "Tail" in bone.name and not bone.name.endswith("Handle")]
+        bones = [bone for bone in data.bones if "Tail" in bone.name and not bone.name.endswith("Handle")]
         tail_count = len(bones)
         for bone in bones:
             collection.assign(bone)
-        if tail_count == 0:
-            armature_data.collections.remove(collection)
+
+        # 创建名为"Ear"的骨骼集合
+        collection = data.collections.get("Ear")
+        if not collection:
+            collection = data.collections.new("Ear")
+        # 设置集合为不可见
+        collection.is_visible = False  
+        # 查找所有名称中含"Ear"且不以"Handle"结尾和"Sp_"开头的骨骼
+        bones = [bone for bone in data.bones if "Ear" in bone.name and not bone.name.endswith("Handle") and not bone.name.startswith("Sp_")]
+        ear_count = len(bones)
+        for bone in bones:
+            collection.assign(bone)
+
+        # 创建名为"Phys"的骨骼集合
+        collection = data.collections.get("Phys")
+        if not collection:
+            collection = data.collections.new("Phys")
+        # 设置集合为不可见
+        collection.is_visible = False  
+        # 查找所有名称中含"Sp_"且不以"Handle"结尾不以"Sp_He_Hair"和"Sp_Hi_Tail"和"Sp_He_Ear"开头的骨骼
+        bones = [bone for bone in data.bones if "Sp_" in bone.name and not bone.name.endswith("Handle") and not bone.name.startswith("Sp_He_Hair") and not bone.name.startswith("Sp_Hi_Tail") and not bone.name.startswith("Sp_He_Ear")]
+        phys_count = len(bones)
+        for bone in bones:
+            collection.assign(bone)
 
         # 创建名为"Handle"的骨骼集合
-        collection = armature_data.collections.get("Handle")
+        collection = data.collections.get("Handle")
         if not collection:
-            collection = armature_data.collections.new("Handle")        
+            collection = data.collections.new("Handle")        
         # 设置集合为不可见
         collection.is_visible = False        
         # 查找所有名称以"Handle"结尾的骨骼
-        bones = [bone for bone in armature_data.bones if bone.name.endswith("Handle")]
+        bones = [bone for bone in data.bones if bone.name.endswith("Handle")]
         handle_count = len(bones)   
         # 所有匹配的骨骼，添加到集合
         for bone in bones:
              collection.assign(bone)
-        if handle_count == 0:
-            armature_data.collections.remove(collection) 
         
-        # 创建名为"Ear"的骨骼集合
-        collection = armature_data.collections.get("Ear")
-        if not collection:
-            collection = armature_data.collections.new("Ear")
-        # 设置集合为不可见
-        collection.is_visible = False  
-        # 查找所有名称中含"Tali"且不以"Handle"结尾和"Sp_"开头的骨骼
-        bones = [bone for bone in armature_data.bones if "Ear" in bone.name and not bone.name.endswith("Handle") and not bone.name.startswith("Sp_")]
-        ear_count = len(bones)
-        for bone in bones:
-            collection.assign(bone)
-        if ear_count == 0:
-            armature_data.collections.remove(collection)
-
         # 创建名为"Face"的骨骼集合
-        collection = armature_data.collections.get("Face")
+        collection = data.collections.get("Face")
         if not collection:
-            collection = armature_data.collections.new("Face")        
+            collection = data.collections.new("Face")        
         # 设置集合为不可见
         collection.is_visible = False        
         # 添加所有名称以"Eye"开头的骨骼，但排除Eye_L和Eye_R
-        bones = [bone for bone in armature_data.bones if bone.name.startswith("Eye") and bone.name not in {"Eye_L", "Eye_R"}]
+        bones = [bone for bone in data.bones if bone.name.startswith("Eye") and bone.name not in {"Eye_L", "Eye_R"}]
         face_count = len(bones)   
         for bone in bones:
              collection.assign(bone)
         # 添加所有名称以"Mouth"开头的骨骼
-        bones = [bone for bone in armature_data.bones if bone.name.startswith("Mouth")]
+        bones = [bone for bone in data.bones if bone.name.startswith("Mouth")]
         face_count += len(bones) 
         for bone in bones:
              collection.assign(bone)
         # 添加所有名称以"Cheek"开头的骨骼
-        bones = [bone for bone in armature_data.bones if bone.name.startswith("Cheek")]
+        bones = [bone for bone in data.bones if bone.name.startswith("Cheek")]
         face_count += len(bones) 
         for bone in bones:
              collection.assign(bone)
         # 添加所有名称以"Tooth"开头的骨骼
-        bones = [bone for bone in armature_data.bones if bone.name.startswith("Tooth")]
+        bones = [bone for bone in data.bones if bone.name.startswith("Tooth")]
         face_count += len(bones)
         for bone in bones:
              collection.assign(bone)
         # 添加所有名称以"Tongue"开头的骨骼
-        bones = [bone for bone in armature_data.bones if bone.name.startswith("Tongue")]
+        bones = [bone for bone in data.bones if bone.name.startswith("Tongue")]
         face_count += len(bones)
         for bone in bones:
              collection.assign(bone)
         # 添加名称为Chin, Nose, M_Line00"的骨骼
         bones_name = {"Chin", "Nose", "M_Line00"}
-        bones = [bone for bone in armature_data.bones if bone.name in bones_name]
+        bones = [bone for bone in data.bones if bone.name in bones_name]
         face_count += len(bones)
         for bone in bones:
              collection.assign(bone)
         # 添加名称为M_Cheek, M_Eye, M_Mayu_L, M_Mayu_R, M_Mouth的骨骼
         bones_name = {"M_Cheek", "M_Eye", "M_Mayu_L", "M_Mayu_R", "M_Mouth"}
-        bones = [bone for bone in armature_data.bones if bone.name in bones_name]
+        bones = [bone for bone in data.bones if bone.name in bones_name]
         face_count += len(bones)        
         for bone in bones:
             collection.assign(bone)
 
-        if face_count == 0:
-            armature_data.collections.remove(collection)
-
         # 创建名为"Others"的骨骼集合
-        collection = armature_data.collections.get("Others")
+        collection = data.collections.get("Others")
         if not collection:
-            collection = armature_data.collections.new("Others")        
+            collection = data.collections.new("Others")        
         # 设置集合为不可见
         collection.is_visible = False        
-        # 添加名称为Wrist_L_Pole, Wrist_R_Pole, Wrist_L_Target, Wrist_R_Target, Hand_Attach_L, Hand_Attach_R的骨骼
-        bones_name = {"Wrist_L_Pole", "Wrist_R_Pole", "Wrist_L_Target", "Wrist_R_Target", "Hand_Attach_L", "Hand_Attach_R"}
-        bones = [bone for bone in armature_data.bones if bone.name in bones_name]
+        # 添加名称为Wrist_L_Pole, Wrist_R_Pole, Wrist_L_Target, Wrist_R_Target的骨骼
+        bones_name = {"Wrist_L_Pole", "Wrist_R_Pole", "Wrist_L_Target", "Wrist_R_Target"}
+        bones = [bone for bone in data.bones if bone.name in bones_name]
         others_count = len(bones)
         for bone in bones:
              collection.assign(bone)
         # 添加所有名称以"Head"开头的骨骼，但排除Head
-        bones = [bone for bone in armature_data.bones if bone.name.startswith("Head") and bone.name != "Head" and bone.name != "Head_Handle"]
+        bones = [bone for bone in data.bones if bone.name.startswith("Head") and bone.name != "Head" and bone.name != "Head_Handle"]
         others_count += len(bones)
         for bone in bones:
              collection.assign(bone)
         # 添加所有名称以"Sp_He_Ear"开头的骨骼
-        bones = [bone for bone in armature_data.bones if bone.name.startswith("Sp_He_Ear")]
+        bones = [bone for bone in data.bones if bone.name.startswith("Sp_He_Ear") and not bone.name.endswith("Handle")]
         others_count += len(bones)
         for bone in bones:
              collection.assign(bone)
-        if others_count == 0:
-            armature_data.collections.remove(collection)
 
         # 找出所有未被任何集合包含的骨骼
         bones = []
-        for bone in armature_data.bones:
+        for bone in data.bones:
             assigned = False
-            for coll in armature_data.collections:
+            for coll in data.collections:
                 if bone.name in coll.bones:
                     assigned = True
                     break
             if not assigned:
                 bones.append(bone.name)
+
         unassigned_count = len(bones)
 
         if unassigned_count != 0:
             # 创建名为"Unassigned"的骨骼集合
-            collection = armature_data.collections.get("Unassigned")
+            collection = data.collections.get("Unassigned")
             if not collection:
-                collection = armature_data.collections.new("Unassigned")        
-            collection.is_visible = False
+                collection = data.collections.new("Unassigned")        
             # 移动未分层的骨骼
             for bone in bones:
-                collection.assign(armature_data.bones[bone])
+                collection.assign(data.bones[bone])
 
-        match handle_count + face_count + others_count + hair_count + ear_count + phys_count + unassigned_count:
+        bpy.ops.armature.collection_remove_unused()
+
+        if current_mode == 'EDIT':
+            bpy.ops.object.mode_set(mode='EDIT')
+
+        match root_count + handle_count + face_count + others_count + hair_count + ear_count + phys_count + unassigned_count:
             case 0:
                 self.report({'INFO'}, "No bones are hidden; No bones are unassigned")
             case 1:
@@ -257,47 +233,22 @@ class BoneLayerOperator(bpy.types.Operator):
             case _:
                 match unassigned_count:
                     case 0:
-                        self.report({'INFO'}, f"{handle_count + face_count + others_count + hair_count + ear_count + phys_count + unassigned_count} bone is hidden; No bones are unassigned")
+                        self.report({'INFO'}, f"{root_count + handle_count + face_count + others_count + hair_count + ear_count + phys_count + unassigned_count} bones are hidden")
                     case 1:
-                        self.report({'INFO'}, f"{handle_count + face_count + others_count + hair_count + ear_count + phys_count + unassigned_count} bone is hidden; 1 bone is unassigned")
+                        self.report({'INFO'}, f"{root_count + handle_count + face_count + others_count + hair_count + ear_count + phys_count + unassigned_count} bones are hidden; 1 bone is unassigned")
                     case _:
-                        self.report({'INFO'}, f"{handle_count + face_count + others_count + hair_count + ear_count + phys_count + unassigned_count} bone is hidden; {unassigned_count} bones are unassigned")
+                        self.report({'INFO'}, f"{root_count + handle_count + face_count + others_count + hair_count + ear_count + phys_count + unassigned_count} bones are hidden; {unassigned_count} bones are unassigned")
         return {'FINISHED'}
 
-class BoneLayerResetOperator(bpy.types.Operator):
-    '''Reset the umamusume skeleton collections'''
-    bl_idname = "object.uma_bonelayerreset_ops"
-    bl_label = "Reset"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    # 操作的前提条件
-    @classmethod
-    def poll(cls, context: bpy.types.Context):
-        # 检查当前上下文是否有选中的对象，并且该对象是骨架类型
-        return context.active_object is not None and context.active_object.type == 'ARMATURE' and len(context.selected_objects) == 1
-    
-    def execute(self, context: bpy.types.Context):
-        armature_obj = context.active_object
-        armature_data = armature_obj.data
-
-        collections_to_remove = ["Body", "Arm", "Leg", "Finger", "Hair", "Phys", "Tail", "Handle", "Ear", "Face", "Others", "Unassigned"]
-        for collection_name in collections_to_remove:
-            collection = armature_data.collections.get(collection_name)
-            if collection:
-                armature_data.collections.remove(collection)
-
-        self.report({'INFO'}, "Armature collections have been reset")
-        return {'FINISHED'}
-
-class BoneSimplifyOperator(bpy.types.Operator):
+class SimplifyArmature(bpy.types.Operator):
     '''Delete selected collections and bones in it'''
-    bl_idname = "object.uma_bonesimplify_ops"
-    bl_label = "Simplify Armature"
+    bl_idname = "uma.simplify_armature"
+    bl_label = "Del"
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context: bpy.types.Context):
-        return context.active_object is not None and context.active_object.type == 'ARMATURE' and context.scene.delete_handle_collection | context.scene.delete_face_collection | context.scene.delete_others_collection  and len(context.selected_objects) == 1
+        return context.active_object is not None and context.active_object.type == 'ARMATURE' and context.scene.del_handle | context.scene.del_face | context.scene.del_others and len(context.selected_objects) == 1
 
     def transfer_weights_to_head(self, armature_obj, bone_names_to_remove):
         """Transfer vertex weights from specified bones to the Head bone"""
@@ -352,20 +303,21 @@ class BoneSimplifyOperator(bpy.types.Operator):
                     obj.vertex_groups.remove(vg)
 
     def execute(self, context: bpy.types.Context):
+        
+        arm_obj = context.active_object
+        data = arm_obj.data
+        current_mode = arm_obj.mode
         count = 0
-        armature_obj = context.active_object
-        armature_data = armature_obj.data
-        current_mode = armature_obj.mode
 
-        if context.scene.delete_handle_collection:
+        if context.scene.del_handle:
             # 删除名为"Handle"的骨骼集合中的所有骨骼
             if current_mode != 'OBJECT':
                 bpy.ops.object.mode_set(mode='OBJECT')
-            collection_to_remove = armature_data.collections.get("Handle")
+            collection_to_remove = data.collections.get("Handle")
             if collection_to_remove:
                 bone_names_to_remove = [bone.name for bone in collection_to_remove.bones]
                 bpy.ops.object.mode_set(mode='EDIT')
-                edit_bones = armature_data.edit_bones
+                edit_bones = data.edit_bones
                 for bone_name in bone_names_to_remove:
                     bone = edit_bones.get(bone_name)
                     if bone:
@@ -374,21 +326,21 @@ class BoneSimplifyOperator(bpy.types.Operator):
                             child.parent = None
                         edit_bones.remove(bone)
                         count += 1
-                armature_data.collections.remove(collection_to_remove)
+                data.collections.remove(collection_to_remove)
 
-        if context.scene.delete_face_collection:
+        if context.scene.del_face:
             # 删除名为"Face"的骨骼集合中的所有骨骼
             bpy.ops.object.mode_set(mode='OBJECT')
-            collection_to_remove = armature_data.collections.get("Face")
+            collection_to_remove = data.collections.get("Face")
             if collection_to_remove:
                 bone_names_to_remove = [bone.name for bone in collection_to_remove.bones]
                 
                 # 在删除骨骼前转移权重到Head
-                self.transfer_weights_to_head(armature_obj, bone_names_to_remove)
+                self.transfer_weights_to_head(arm_obj, bone_names_to_remove)
                 
                 # 删除骨骼
                 bpy.ops.object.mode_set(mode='EDIT')
-                edit_bones = armature_data.edit_bones
+                edit_bones = data.edit_bones
                 for bone_name in bone_names_to_remove:
                     bone = edit_bones.get(bone_name)
                     if bone:
@@ -397,18 +349,18 @@ class BoneSimplifyOperator(bpy.types.Operator):
                             child.parent = None
                         edit_bones.remove(bone)
                         count += 1
-                armature_data.collections.remove(collection_to_remove)
+                data.collections.remove(collection_to_remove)
 
-        if context.scene.delete_others_collection:
+        if context.scene.del_others:
             # 删除名为"Others"的骨骼集合中的所有骨骼
             bpy.ops.object.mode_set(mode='OBJECT')
-            collection_to_remove = armature_data.collections.get("Others")
+            collection_to_remove = data.collections.get("Others")
             if collection_to_remove:
                 bone_names_to_remove = [bone.name for bone in collection_to_remove.bones]
                 bpy.ops.object.mode_set(mode='EDIT')
-                edit_bones = armature_data.edit_bones
+                edit_bones = data.edit_bones
                 # 在删除骨骼前，如果被删除的骨骼有子骨骼，则将子骨骼的父骨骼设为Head
-                # 查找Head骨骼（作为新的父骨骼）
+                # 查找Head骨骼作为新的父骨骼
                 head_bone = edit_bones.get("Head")
                 for bone_name in bone_names_to_remove:
                     bone = edit_bones.get(bone_name)
@@ -423,336 +375,231 @@ class BoneSimplifyOperator(bpy.types.Operator):
                             child.parent = None
                         edit_bones.remove(bone)
                         count += 1
-                armature_data.collections.remove(collection_to_remove)
+                data.collections.remove(collection_to_remove)
 
         # 恢复原始模式
         bpy.ops.object.mode_set(mode=current_mode)
 
         match count:
             case 0:
-                self.report({'INFO'}, "No bones are deleted")
+                self.report({'INFO'}, "No bone deleted")
             case 1:
                 self.report({'INFO'}, "1 bone is deleted")
             case _:
                 self.report({'INFO'}, f"{count} bones are deleted")
         return {'FINISHED'}
-    
-class GenerateControllerOperator(bpy.types.Operator):
-    '''Generate controller for umamusume'''
-    bl_idname = "object.uma_generatecontroller_ops"
-    bl_label = "Generate Controller"
+
+class RefineBoneStructure(bpy.types.Operator):
+    '''Refine the bone structure of the umamusume skeleton'''
+    bl_idname = "uma.refine_bone_structure"
+    bl_label = "Refine Structure"
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context: bpy.types.Context):
-        return context.active_object is not None and context.active_object.type == 'ARMATURE' and len(context.selected_objects) == 1
-
-    def execute(self, context: bpy.types.Context):
-        
-        armature_obj = context.active_object  
-
-        if "ShoulderRoll_L" not in armature_obj.data.bones:
-            self.report({'ERROR'}, "ShoulderRoll_L bone not found")
-            return {'CANCELLED'}
-        if "ShoulderRoll_R" not in armature_obj.data.bones:
-            self.report({'ERROR'}, "ShoulderRoll_R bone not found")
-            return {'CANCELLED'}
-        if "ArmRoll_L" not in armature_obj.data.bones:
-            self.report({'ERROR'}, "ArmRoll_L bone not found")
-            return {'CANCELLED'}
-        if "ArmRoll_R" not in armature_obj.data.bones:
-            self.report({'ERROR'}, "ArmRoll_R bone not found")
-            return {'CANCELLED'}
-
-        try:
-            result = bpy.ops.object.uma_fixeyebone_ops()
-            if result != {'FINISHED'}:
-                self.report({'ERROR'}, "Failed to fix eye bones")
-                return {'CANCELLED'}
-        except Exception as e:
-            self.report({'ERROR'}, f"{str(e)}")
-            return {'CANCELLED'}
-    
-        rename_map = {
-            "ShoulderRoll_L": "腕捩.L",
-            "ShoulderRoll_R": "腕捩.R",
-            "ArmRoll_L": "手捩.L",
-            "ArmRoll_R": "手捩.R"
-        }
-        reverse_map = {v: k for k, v in rename_map.items()}
-
-        bpy.ops.object.mode_set(mode='EDIT')
-        edit_bones = armature_obj.data.edit_bones
-        for eng_name, jp_name in rename_map.items():
-            if bone := edit_bones.get(eng_name):
-                bone.name = jp_name
-        bpy.ops.object.mode_set(mode='OBJECT')
-
-        context.object.mmr.Import_presets = True
-        Original_Hide_mmd_skeleton = context.object.mmr.Hide_mmd_skeleton
-        context.object.mmr.Hide_mmd_skeleton = True
-        context.object.mmr.json_filepath = os.path.join(os.path.dirname(__file__), "umaviewer.json")
-        bpy.ops.object.mmr_rig()
-        context.object.mmr.Hide_mmd_skeleton = Original_Hide_mmd_skeleton
-        rigify_active = context.active_object
-        context.view_layer.objects.active = armature_obj
-
-        bpy.ops.object.mode_set(mode='EDIT')
-        edit_bones = armature_obj.data.edit_bones
-        for jp_name, eng_name in reverse_map.items():
-            if bone := edit_bones.get(jp_name):
-                bone.name = eng_name
-        bpy.ops.object.mode_set(mode='OBJECT')
-
-        bpy.context.active_object.hide_set(True)
-        rigify_active.select_set(True)
-        bpy.context.view_layer.objects.active = rigify_active
-
-        self.report({'INFO'}, "Controller generated successfully")
-        return {'FINISHED'}
-
-class FixEyeBoneOperator(bpy.types.Operator):
-    '''Repairs bones used to control binocular movements'''
-    bl_idname = "object.uma_fixeyebone_ops"
-    bl_label = "Fix Eye Bone"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    @classmethod
-    def poll(cls, context: bpy.types.Context):
-        return context.active_object is not None and context.active_object.type == 'ARMATURE' and len(context.selected_objects) == 1
+        return context.active_object and context.active_object.type == 'ARMATURE' and len(context.selected_objects) == 1
 
     def execute(self, context: bpy.types.Context):
 
         armature_obj = context.active_object
-        current_mode = armature_obj.mode
-        bpy.ops.object.mode_set(mode='OBJECT')
+        original_mode = armature_obj.mode
 
         # 检测是否存在眼部骨骼
-        if "Eye_L" not in armature_obj.data.bones or "Eye_R" not in armature_obj.data.bones:
-            self.report({'ERROR'}, "Eye_L and Eye_R bones not found")
+        if 'Eye_L' not in armature_obj.data.bones or 'Eye_R' not in armature_obj.data.bones:
+            self.report({'ERROR'}, "Eye bones not found")
             return {'CANCELLED'}
 
-        mesh_objects = []
-        for obj in bpy.data.objects:
-            if obj.type == 'MESH':
-                for mod in obj.modifiers:
-                    if mod.type == 'ARMATURE' and mod.object == armature_obj:
-                        mesh_objects.append(obj)
-                        break
+        edit_bones = armature_obj.data.edit_bones
+        if self.fix_eye_shapekeys(context, armature_obj):
+            # 调整骨骼变换
+            bpy.ops.object.mode_set(mode='EDIT')
+            for name in ['Eye_L', 'Eye_R']:
+                eb = edit_bones.get(name)
+                if eb:
+                    eb.matrix @= mathutils.Matrix.Rotation(math.radians(90), 4, 'X')
+                    eb.length *= 0.4
+
+            for name in ["Toe_offset_L", "Toe_offset_R"]:
+                eb = edit_bones.get(name)
+                if eb:
+                    eb.matrix @= mathutils.Matrix.Rotation(math.radians(90), 4, 'X')
+
+            for name in ['Ear_03_L', 'Ear_03_R', 'Index_03_L', 'Middle_03_L', 'Pinky_03_L', 'Ring_03_L', 'Thumb_03_L', 'Index_03_R', 'Middle_03_R', 'Pinky_03_R', 'Ring_03_R', 'Thumb_03_R', 'Sp_Hi_Tail0_B_04']:
+                eb = edit_bones.get(name)
+                if eb and eb.parent:
+                    eb.tail = eb.head + eb.parent.tail - eb.parent.head
+
+        # 连接骨骼
+        connect_bones = ['Head', 'Neck', 'Chest', 'Spine', 'Arm_L', 'Elbow_L', 'Arm_R', 'Elbow_R', 'Knee_L', 'Knee_R', 'Index_02_L', 'Index_03_L', 'Middle_02_L', 'Middle_03_L', 'Pinky_02_L', 'Pinky_03_L', 'Ring_02_L', 'Ring_03_L', 'Thumb_02_L', 'Thumb_03_L', 'Index_02_R', 'Index_03_R', 'Middle_02_R', 'Middle_03_R', 'Pinky_02_R', 'Pinky_03_R', 'Ring_02_R', 'Ring_03_R', 'Thumb_02_R', 'Thumb_03_R']
+        for b in connect_bones:
+            if b in edit_bones:
+                edit_bones[b].use_connect = True
+
+        # 隐藏骨骼
+        bpy.ops.object.mode_set(mode='POSE')
+        hidden_bones = ['Ankle_L', 'Toe_L', 'Ankle_R', 'Toe_R', 'Hand_Attach_L', 'Hand_Attach_R', 'UpBody_Ctrl']
+        for b in hidden_bones:
+            pbone = armature_obj.pose.bones.get(b)
+            if pbone:
+                pbone.bone.hide = True
+
+        if armature_obj.mode != original_mode:
+            bpy.ops.object.mode_set(mode=original_mode)
+
+        self.report({'INFO'}, "Refine the bone successfully")
+        return {'FINISHED'}
+
+    def fix_eye_shapekeys(self, context, armature_obj):
+
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.object.select_all(action='DESELECT')
+
+        mesh_counter = 0
+        for obj in context.scene.objects:
+            if obj.type == 'MESH' and any(m.type == 'ARMATURE' and m.object == armature_obj for m in obj.modifiers):
+                mesh_obj = obj
+                mesh_counter += 1
+            if mesh_counter == 2:
+                print("Fix eye shapekeys failed. Multiple meshes use this armature")
+                return False
+        if mesh_counter == 0:
+            print("Fix eye shapekeys failed. No mesh found using this armature")
+            return False
         
-        for mesh_obj in mesh_objects:
-            if "Head" not in mesh_obj.vertex_groups:
-                head_group = mesh_obj.vertex_groups.new(name="Head")
-            else:
-                head_group = mesh_obj.vertex_groups["Head"]
+        vgroup_names = ['Eye_L', 'Eye_R']
+        for v in vgroup_names:
+            if v not in mesh_obj.vertex_groups:
+                return False
+
+        # 激活网格
+        context.view_layer.objects.active = mesh_obj
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all(action='DESELECT')
+        # 选中顶点组
+        for name in vgroup_names:
+            bpy.ops.object.vertex_group_set_active(group=name)
+            bpy.ops.object.vertex_group_select()
+
+        # 分离选中项
+        bpy.ops.mesh.separate(type='SELECTED')
+        # 将分离出来的网格对象设为活动
+        bpy.ops.object.mode_set(mode='OBJECT')
+        eye_mesh_obj = context.selected_objects[0]
+        context.view_layer.objects.active = eye_mesh_obj
+        
+        # 吸附到对称结构
+        bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.select_all()
+        bpy.ops.mesh.symmetry_snap()
+        bpy.ops.mesh.select_all(action='DESELECT')
+
+        # 形态键
+        bpy.ops.object.mode_set(mode='OBJECT')
+        kb_data = eye_mesh_obj.data.shape_keys.key_blocks
+
+        # 设置所有形态键的值为 0
+        for key_block in kb_data:
+            key_block.value = 0.0
+
+        key_names = [
+            ("Eye_20_R(XRange)[M_Face]", "Eye_R(R)", "Eye_L(L)"),
+            ("Eye_20_L(XRange)[M_Face]", "Eye_L(R)", "Eye_R(L)"),
+            ("Eye_21_R(YRange)[M_Face]", "Eye_R(D)", "Eye_L(D)"),
+            ("Eye_21_L(YRange)[M_Face]", "Eye_L(U)", "Eye_R(U)"),
+        ]
+
+        for ori, sor, mir in key_names:
+            # 检查形态键是否存在
+            if ori not in kb_data:
+                continue
+            # 设定源形态键为 1
+            kb_data[ori].value = 1
+            # 选中源形态键
+            eye_mesh_obj.active_shape_key_index = kb_data.keys().index(ori)
+            # 复制形态键
+            bpy.ops.object.shape_key_add(from_mix=True)
+            # 获取新生成的形态键
+            new_key = kb_data[-1]
+            # 镜像形态键
+            kb_data[ori].value = 0
+            new_key.value = 1
+            bpy.ops.object.shape_key_mirror()
+            new_key.value = 0
+            # 重命名
+            kb_data[ori].name = sor
+            new_key.name = mir
+
+        mesh_obj.select_set(True)
+        context.view_layer.objects.active = mesh_obj
+        bpy.ops.object.join()
+
+        # 删除形态键
+        kb_data = mesh_obj.data.shape_keys.key_blocks
+        for name, _, _ in key_names:
+            if kb_data.get(name):
+                mesh_obj.shape_key_remove(kb_data.get(name))
+        if kb_data.get('Basis.001'):
+                mesh_obj.shape_key_remove(kb_data.get('Basis.001'))
+
+        # 驱动器
+        drivers = [
+            ("Eye_L(L)", "Eye_L", 'ROT_Z', -1), 
+            ("Eye_L(R)", "Eye_L", 'ROT_Z',  1), 
+            ("Eye_L(U)", "Eye_L", 'ROT_X', -1), 
+            ("Eye_L(D)", "Eye_L", 'ROT_X',  1), 
+            ("Eye_R(L)", "Eye_R", 'ROT_Z', -1), 
+            ("Eye_R(R)", "Eye_R", 'ROT_Z',  1), 
+            ("Eye_R(U)", "Eye_R", 'ROT_X', -1), 
+            ("Eye_R(D)", "Eye_R", 'ROT_X',  1), 
+        ]
+
+        for sk_name, bone_name, axis, direction in drivers:
+            # 检查形态键是否存在
+            if sk_name not in kb_data:
+                print(f"Skipping driver for missing key: {sk_name}")
+                continue
             
-            # 处理每个眼部骨骼
-            for eye_bone in ["Eye_L", "Eye_R"]:
-                if eye_bone in mesh_obj.vertex_groups:
-                    eye_group = mesh_obj.vertex_groups[eye_bone]                    
-                    # 遍历网格的所有顶点
-                    for vert in mesh_obj.data.vertices:
-                        try:
-                            # 获取顶点在眼部骨骼组的权重
-                            weight = eye_group.weight(vert.index)
-                            
-                            # 添加到Head组, 替换原有权重
-                            head_group.add([vert.index], weight, 'REPLACE')
-                        except RuntimeError:
-                            # 顶点不在该组中则跳过
-                            continue                    
-                    # 删除眼部骨骼顶点组
-                    mesh_obj.vertex_groups.remove(eye_group)
+            shape_key = kb_data[sk_name]
+            # 移除驱动器
+            shape_key.driver_remove("value")
+            # 添加驱动器
+            drv = shape_key.driver_add("value").driver
+            drv.type = 'SCRIPTED'
+            # 创建骨骼旋转的变量 
+            var = drv.variables.new()
+            var.type = 'TRANSFORMS'
+            target = var.targets[0]
+            target.id = armature_obj
+            target.bone_target = bone_name
+            target.transform_type = axis
+            target.transform_space = 'LOCAL_SPACE'
+            # 驱动器表达式
+            drv.expression = f"{var.name} * {direction}  * 1.5"
+
+        # 顶点组
+        for eye_bone in vgroup_names:
+            if eye_bone in mesh_obj.vertex_groups and "Head" in mesh_obj.vertex_groups:
+                # 使用修改器合并权重
+                mod = mesh_obj.modifiers.new(name="TMP", type='VERTEX_WEIGHT_MIX')
+                mod.vertex_group_a = "Head"
+                mod.vertex_group_b = eye_bone
+                mod.mix_mode = 'ADD'
+                mod.mix_set = 'ALL'
+                # 将修改器移动到顶部
+                with context.temp_override(object=mesh_obj, active_object=mesh_obj):
+                    bpy.ops.object.modifier_move_to_index(modifier=mod.name, index=0)
+                # 应用修改器
+                with context.temp_override(object=mesh_obj, active_object=mesh_obj):
+                    bpy.ops.object.modifier_apply(modifier=mod.name)
+                # 删除顶点组
+                mesh_obj.vertex_groups.remove(mesh_obj.vertex_groups[eye_bone])
 
         bpy.ops.object.mode_set(mode='EDIT')
-        edit_bones = armature_obj.data.edit_bones
-
-        for bone_name in ["Eye_L", "Eye_R"]:
-            if bone_name in edit_bones:
-                bone = edit_bones[bone_name]
-                if  bone.length > 0.07:
-                    # 旋转眼部骨骼
-                    bone.matrix @= mathutils.Matrix.Rotation(math.radians(90), 4, 'X')
-                    # 缩小眼部骨骼
-                    bone.length *= 0.4
-                
-        # 为该骨架控制的网格添加形态键驱动器
-        for mesh_obj in mesh_objects:
-            if mesh_obj.data.shape_keys:
-                # 右眼水平形态键
-                right_hsk_name = "Eye_20_R(XRange)[M_Face]"
-                if right_hsk_name in mesh_obj.data.shape_keys.key_blocks:
-                    # 创建驱动器
-                    drv = mesh_obj.data.shape_keys.key_blocks[right_hsk_name].driver_add("value").driver
-                    drv.type = 'SCRIPTED'                    
-                    # 添加变量
-                    var = drv.variables.new()
-                    var.name = "eye_rot"
-                    var.type = 'TRANSFORMS'
-                    target = var.targets[0]
-                    target.id = armature_obj
-                    target.bone_target = "Eye_R"
-                    target.transform_type = 'ROT_Z'
-                    target.transform_space = 'LOCAL_SPACE'                    
-                    # 设置表达式
-                    drv.expression = "eye_rot * 2"
-                
-                # 左眼水平形态键
-                left_hsk_name = "Eye_20_L(XRange)[M_Face]"
-                if left_hsk_name in mesh_obj.data.shape_keys.key_blocks:
-                    # 创建驱动器
-                    drv = mesh_obj.data.shape_keys.key_blocks[left_hsk_name].driver_add("value").driver
-                    drv.type = 'SCRIPTED'                    
-                    # 添加变量
-                    var = drv.variables.new()
-                    var.name = "eye_rot"
-                    var.type = 'TRANSFORMS'
-                    target = var.targets[0]
-                    target.id = armature_obj
-                    target.bone_target = "Eye_L"
-                    target.transform_type = 'ROT_Z'
-                    target.transform_space = 'LOCAL_SPACE'                    
-                    # 设置表达式
-                    drv.expression = "eye_rot * 2"
-
-                # 右眼垂直形态键
-                right_vsk_name = "Eye_21_R(YRange)[M_Face]"
-                if right_vsk_name in mesh_obj.data.shape_keys.key_blocks:
-                    # 创建驱动器
-                    drv = mesh_obj.data.shape_keys.key_blocks[right_vsk_name].driver_add("value").driver
-                    drv.type = 'SCRIPTED'                    
-                    # 添加变量
-                    var = drv.variables.new()
-                    var.name = "eye_rot"
-                    var.type = 'TRANSFORMS'
-                    target = var.targets[0]
-                    target.id = armature_obj
-                    target.bone_target = "Eye_R"
-                    target.transform_type = 'ROT_X'
-                    target.transform_space = 'LOCAL_SPACE'                    
-                    # 设置表达式
-                    drv.expression = "eye_rot * 2"
-
-                # 左眼垂直形态键
-                left_vsk_name = "Eye_21_L(YRange)[M_Face]"
-                if left_vsk_name in mesh_obj.data.shape_keys.key_blocks:
-                    # 创建驱动器
-                    drv = mesh_obj.data.shape_keys.key_blocks[left_vsk_name].driver_add("value").driver
-                    drv.type = 'SCRIPTED'                    
-                    # 添加变量
-                    var = drv.variables.new()
-                    var.name = "eye_rot"
-                    var.type = 'TRANSFORMS'
-                    target = var.targets[0]
-                    target.id = armature_obj
-                    target.bone_target = "Eye_L"
-                    target.transform_type = 'ROT_X'
-                    target.transform_space = 'LOCAL_SPACE'                    
-                    # 设置表达式
-                    drv.expression = "- eye_rot * 2"
-
-        # 将形态键的范围设置为-2到2
-        for mesh_obj in mesh_objects:
-            if mesh_obj.data.shape_keys:
-                for key_block in mesh_obj.data.shape_keys.key_blocks:
-                    if "Eye_20" in key_block.name or "Eye_21" in key_block.name:
-                        key_block.slider_min = -2.0
-                        key_block.slider_max = 2.0
-
-        bpy.ops.object.mode_set(mode=current_mode)
-        self.report({'INFO'}, "Eye bones fixed successfully")
-        return {'FINISHED'}
-    
-class CombineShapeKeysOperator(bpy.types.Operator):
-    '''Generate left-right symmetirc combination form keys'''
-    bl_idname = "object.uma_combineshapekeys_ops"
-    bl_label = "Combine Shape Keys"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    @classmethod
-    def poll(cls, context: bpy.types.Context):
-        return context.active_object and context.active_object.type == 'MESH' and len(context.selected_objects) == 1
-    
-    def execute(self, context: bpy.types.Context):
-        mesh_obj = context.active_object
-        if not mesh_obj.data.shape_keys or not mesh_obj.data.shape_keys.key_blocks:
-            self.report({'ERROR'}, "The selected mesh has no shape keys")
-            return {'CANCELLED'}
-        if len(mesh_obj.data.shape_keys.key_blocks) <= 1:
-            self.report({'ERROR'}, "The selected mesh has no shape keys to combine")
-            return {'CANCELLED'}
-        
-        shape_keys = mesh_obj.data.shape_keys.key_blocks
-        for key in shape_keys:
-            key.value = 0.0
-        
-        eyebrow_pairs = [
-            ("WaraiA", 1), ("WaraiB", 2), ("WaraiC", 3), ("WaraiD", 4),
-            ("IkariA", 5), ("KanasiA", 6), ("DoyaA", 7), ("DereA", 8),
-            ("OdorokiA", 9), ("OdorokiB", 10), ("JitoA", 11), ("KomariA", 12),
-            ("KusyoA", 13), ("UreiA", 14), ("RunA", 15), ("RunB", 16),
-            ("SeriousA", 17), ("SeriousB", 18), ("ShiwaA", 19), ("ShiwaB", 20),
-            ("Offset_U", 21), ("Offset_D", 22)
-        ]
-        
-        for name, num in eyebrow_pairs:
-            right_key = f"EyeBrow_{num}_R({name})[M_Face]"
-            left_key = f"EyeBrow_{num}_L({name})[M_Face]"
-            
-            if right_key in shape_keys and left_key in shape_keys:
-                shape_keys[right_key].value = 1.0
-                shape_keys[left_key].value = 1.0
-                bpy.ops.object.shape_key_add(from_mix=True)
-                new_key = mesh_obj.data.shape_keys.key_blocks[-1]
-                new_key.name = f"EyeBrow_{num}({name})"
-                shape_keys[right_key].value = 0
-                shape_keys[left_key].value = 0
-        
-        eye_pairs = [
-            ("HalfA", 1), ("CloseA", 2), ("HalfB", 3), ("HalfC", 4),
-            ("WaraiA", 5), ("WaraiB", 6), ("WaraiC", 7), ("WaraiD", 8),
-            ("IkariA", 9), ("KanasiA", 10), ("DereA", 11), ("OdorokiA", 12),
-            ("OdorokiB", 13), ("OdorokiC", 14), ("JitoA", 15), ("KusyoA", 16),
-            ("UreiA", 17), ("RunA", 18), ("DrivenA", 19),
-            ("EyeHideA", 22), ("SeriousA", 23), ("PupilA", 24),
-            ("PupilB", 25), ("PupilC", 26), ("EyelidHideA", 27), ("EyelidHideB", 28)
-        ]
-        
-        for name, num in eye_pairs:
-            right_key = f"Eye_{num}_R({name})[M_Face]"
-            left_key = f"Eye_{num}_L({name})[M_Face]"
-            
-            if right_key in shape_keys and left_key in shape_keys:
-                shape_keys[right_key].value = 1.0
-                shape_keys[left_key].value = 1.0
-                bpy.ops.object.shape_key_add(from_mix=True)
-                new_key = mesh_obj.data.shape_keys.key_blocks[-1]
-                new_key.name = f"Eye_{num}({name})"
-                shape_keys[right_key].value = 0
-                shape_keys[left_key].value = 0
-        
-        ear_pairs = [
-            ("Base_N", 1), ("Kanasi", 2), ("Dere_N", 3), ("Dere", 4),
-            ("Yure", 5), ("Biku_N", 6), ("Biku", 7), ("Ikari", 8),
-            ("Tanosi", 9), ("Up_N", 10), ("Up", 11), ("Down", 12),
-            ("Front", 13), ("Side", 14), ("Back", 15), ("Roll", 16)
-        ]
-        
-        for name, num in ear_pairs:
-            right_key = f"Ear_{num}_R({name})[M_Hair]"
-            left_key = f"Ear_{num}_L({name})[M_Hair]"
-            
-            if right_key in shape_keys and left_key in shape_keys:
-                shape_keys[right_key].value = 1.0
-                shape_keys[left_key].value = 1.0
-                bpy.ops.object.shape_key_add(from_mix=True)
-                new_key = mesh_obj.data.shape_keys.key_blocks[-1]
-                new_key.name = f"Ear_{num}({name})"
-                shape_keys[right_key].value = 0
-                shape_keys[left_key].value = 0
-        
-        return {'FINISHED'}
-    
+        bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.object.select_all(action='DESELECT')
+        context.view_layer.objects.active = armature_obj
+        return True
+   
 class FixBlushOperator(bpy.types.Operator):
     '''Fix blush of mini umamusume model'''
     bl_idname = "object.miniuma_fixblush_ops"
@@ -1047,203 +894,75 @@ class FixNormalsOperator(bpy.types.Operator):
         self.report({'INFO'}, "Normals fixed successfully")
         return {'FINISHED'}
 
-class ChangeHeadPretreatmentOperator(bpy.types.Operator):
+class ChangeHeadPretreat(bpy.types.Operator):
     '''Make the umamusume model more suitable for the production of change-head secondary creation'''
-    bl_idname = "object.uma_changeheadpretreat_ops"
+    bl_idname = "uma.changehead_pretreat"
     bl_label = "Pretreat"
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context: bpy.types.Context):
-        return context.active_object is not None and context.active_object.type == 'EMPTY' and len(context.selected_objects) == 1
+        return context.active_object and context.active_object.type == 'ARMATURE' and len(context.selected_objects) == 1
 
     def execute(self, context: bpy.types.Context):
-        obj = context.active_object
-       
-        # 获取活动项的名称，去掉活动项的名称的前五位，记录为一个新的名称
-        original_name = obj.name
-        new_name = original_name[5:] if len(original_name) > 5 else original_name
 
-        # 选中活动项子级中的骨架
-        child_armature = None
-        for child in obj.children:
-            if child.type == 'ARMATURE':
-                child_armature = child
-                break
-        
-        if not child_armature:
-            self.report({'ERROR'}, "No child armature found!")
+        orig_arm = context.active_object
+        current_mode = orig_arm.mode
+        arm_name = orig_arm.name
+        orig_empty = orig_arm.parent
+        empty_name = orig_empty.name
+        mesh_name = orig_arm.children[0].name
+
+        if not orig_arm.data.bones.get("Neck"):
+            self.report({'ERROR'}, "Neck bone not found")
             return {'CANCELLED'}
-        
-        # 将选中的骨架设置为活动项，取消选中选中的空物体
-        obj = child_armature
-        obj.select_set(True)
-        context.view_layer.objects.active = context.selected_objects[1]
-        context.selected_objects[0].select_set(False)
-
-        if "Neck" not in obj.data.bones:
-            self.report({'INFO'}, "Already processed or you chose an illegal model")
-            return {'FINISHED'}
         
         # 选中Head骨并切断
         bpy.ops.object.mode_set(mode='POSE')
-        head_bone = obj.pose.bones.get("Head")
+        bpy.ops.armature.collection_show_all()
+        head_bone = orig_arm.pose.bones.get("Head")
         if head_bone:
             head_bone.bone.select = True
             bpy.ops.mmd_tools.model_separate_by_bones(separate_armature=True, include_descendant_bones=True, boundary_joint_owner='DESTINATION')
         else:
-            self.report({'ERROR'}, "Head bone not found!")
+            self.report({'ERROR'}, "Head bone not found")
             return {'CANCELLED'}
 
-        # 将活动项名称改为之前记录的新名称
-        active_obj = context.active_object
-        context.active_object.name = new_name
-        active_collection = None
+        # 删除原物体并重命名
+        new_empty = context.active_object
+        bpy.data.objects.remove(orig_arm.children[0], do_unlink=True)
+        bpy.data.objects.remove(orig_arm, do_unlink=True)
+        bpy.data.objects.remove(orig_empty, do_unlink=True)
+        new_empty.name = empty_name
+        new_empty.children[0].name = arm_name
+        new_empty.children[0].data.name = arm_name
+        new_empty.children[0].children[0].name = mesh_name
+        new_empty.children[0].children[0].data.name = mesh_name
 
-        # 查找活动对象所在的集合
-        for coll in bpy.data.collections:
-            if active_obj.name in coll.objects:
-                active_collection = coll
-                break
-        
-        if not active_collection:
-            self.report({'ERROR'}, "Active object not found in any collection!")
-            return {'CANCELLED'}
-
-        # 递归获取所有子对象
-        def get_all_children(obj):
-            children = []
-            for child in obj.children:
-                children.append(child)
-                children.extend(get_all_children(child))
-            return children
-
-        # 收集所有需要删除的对象
-        objects_to_delete = set()
-        for obj in active_collection.objects:
-            if obj.name.endswith(active_obj.name) and obj != active_obj:
-                objects_to_delete.add(obj)
-                objects_to_delete.update(get_all_children(obj))
-
-        # 直接删除这些对象而不依赖选择
-        if objects_to_delete:
-            # 创建要删除的对象名称列表
-            object_names_to_delete = [obj.name for obj in objects_to_delete]
-            
-            # 遍历对象名称而不是对象引用
-            for obj_name in object_names_to_delete:
-                # 检查对象是否仍然存在
-                if obj_name not in bpy.data.objects:
-                    continue
-                    
-                obj = bpy.data.objects[obj_name]
-                
-                # 确保对象没有被保护
-                obj.hide_select = False
-                obj.hide_viewport = False
-                obj.hide_render = False
-                
-                # 从所有集合中移除
-                for coll in list(obj.users_collection):
-                    coll.objects.unlink(obj)
-                
-                # 删除对象数据（如果不再被其他对象使用）
-                if obj.data and obj.data.users == 1:
-                    if obj.type == 'MESH':
-                        bpy.data.meshes.remove(obj.data, do_unlink=True)
-                    elif obj.type == 'ARMATURE':
-                        bpy.data.armatures.remove(obj.data, do_unlink=True)
-                
-                # 删除对象本身
-                if obj_name in bpy.data.objects:
-                    bpy.data.objects.remove(bpy.data.objects[obj_name], do_unlink=True)
-
-        # 选中活动项子级中的骨架
-        obj = context.active_object
-        child_armature = None
-        for child in obj.children:
-            if child.type == 'ARMATURE':
-                child_armature = child
-                break
-        # 将选中的骨架设置为活动项，取消选中选中的空物体
-        obj = child_armature
-        obj.select_set(True)
-        context.view_layer.objects.active = context.selected_objects[1]
-        context.selected_objects[0].select_set(False)
-
+        context.view_layer.objects.active = new_empty.children[0]
+        bpy.ops.uma.set_bone_collections()
+        attrs = ['del_handle', 'del_face', 'del_others']
+        orig = [getattr(context.scene, attr) for attr in attrs]
         try:
-            result = bpy.ops.object.uma_bonelayer_ops()
-            if result != {'FINISHED'}:
-                self.report({'ERROR'}, "Failed to layer bones")
-                return {'CANCELLED'}
-        except Exception as e:
-            self.report({'ERROR'}, f"{str(e)}")
-            return {'CANCELLED'}    
-
-        ori_delete_handle_collection = context.scene.delete_handle_collection
-        ori_delete_face_collection = context.scene.delete_face_collection       
-        ori_delete_others_collection = context.scene.delete_others_collection
-        context.scene.delete_handle_collection = True
-        context.scene.delete_face_collection = True     
-        context.scene.delete_others_collection = True
-        try:
-            result = bpy.ops.object.uma_bonesimplify_ops()
-            if result != {'FINISHED'}:
-                self.report({'ERROR'}, "Failed to fix simplify bones")
-                return {'CANCELLED'}
-        except Exception as e:
-            self.report({'ERROR'}, f"{str(e)}")
-            return {'CANCELLED'}        
-        context.scene.delete_handle_collection = ori_delete_handle_collection
-        context.scene.delete_face_collection = ori_delete_face_collection  
-        context.scene.delete_others_collection = ori_delete_others_collection
-        
-        try:
-            result = bpy.ops.object.uma_fixeyebone_ops()
-            if result != {'FINISHED'}:
-                self.report({'ERROR'}, "Failed to fix eye bones")
-                return {'CANCELLED'}
-        except Exception as e:
-            self.report({'ERROR'}, f"{str(e)}")
-            return {'CANCELLED'}
-
+            for attr in attrs:
+                setattr(context.scene, attr, True)
+            bpy.ops.uma.simplify_armature()
+        finally:
+            for attr, val in zip(attrs, orig):
+                setattr(context.scene, attr, val)
+        bpy.ops.uma.generate_ik()
+        bpy.ops.object.mode_set(mode=current_mode)
         return {'FINISHED'}
-    
-class PrintSelectedVerticesOperator(bpy.types.Operator):
-    '''Print selected vertex indexes to the console'''
-    bl_idname = "object.print_selected_vertices"
-    bl_label = "Print Vertex Indexes"
-    bl_options = {'REGISTER', 'UNDO'}
 
-    @classmethod
-    def poll(cls, context):
-        obj = context.active_object
-        return obj and obj.type == 'MESH' and obj.mode == 'EDIT'
-
-    def execute(self, context):
-
-        obj = context.active_object
-        bm = bmesh.from_edit_mesh(obj.data)
-        selected_indices = [v.index for v in bm.verts if v.select]
-
-        if not selected_indices:
-            self.report({'WARNING'}, "No vertices selected")
-            return {'CANCELLED'}
-
-        # 输出到控制台
-        print("Selected vertex indices:", selected_indices)
-        self.report({'INFO'}, f"Print {len(selected_indices)} vertex indexes to the console")
-        return {'FINISHED'}
-    
-class ChangeHeadHoldoutOperator(bpy.types.Operator):
-    '''Reduce the workload of post-production keying by blocking render'''
-    bl_idname = "object.uma_changeheadholdout_ops"
+class ChangeHeadHoldout(bpy.types.Operator):
+    '''Blocking render'''
+    bl_idname = "uma.changehead_holdout"
     bl_label = "Holdout"
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context: bpy.types.Context):
-        return context.active_object is not None and context.active_object.type == 'ARMATURE'
+        return context.active_object and context.active_object.type == 'ARMATURE' and len(context.selected_objects) == 1
 
     def execute(self, context: bpy.types.Context):
 
@@ -1251,7 +970,7 @@ class ChangeHeadHoldoutOperator(bpy.types.Operator):
         head_bone = armature.pose.bones.get('Head')
 
         if not head_bone: 
-            self.report({'ERROR'}, "Head bone not found!")
+            self.report({'ERROR'}, "Head bone not found")
             return {'CANCELLED'}
         
         # 获取骨骼的矩阵
@@ -1292,7 +1011,6 @@ class ChangeHeadHoldoutOperator(bpy.types.Operator):
                 head_bone_collections.append(coll)
                 was_collection_solo = coll.is_solo
                 coll.is_solo = True
-
 
         # 刷新视图层
         context.view_layer.update()
@@ -1340,7 +1058,7 @@ class ChangeHeadNewShapeOperator(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context: bpy.types.Context):
-        return context.active_object is not None and context.active_object.type == 'MESH' and len(context.selected_objects) == 1 and context.active_object.mode == 'OBJECT' and context.active_object.data.shape_keys is not None
+        return context.active_object and context.active_object.type == 'MESH' and len(context.selected_objects) == 1 and context.active_object.mode == 'OBJECT' and context.active_object.data.shape_keys
 
     def execute(self, context: bpy.types.Context):
 
