@@ -1476,12 +1476,7 @@ class GenerateIK(bpy.types.Operator):
         coll = bpy.data.collections.get("WGTS_UMA")
         if not coll:
             coll = bpy.data.collections.new("WGTS_UMA")
-            bpy.context.scene.collection.children.link(coll)
-
         coll.hide_viewport = True
-        layer_coll = bpy.context.view_layer.layer_collection.children.get("WGTS_UMA")
-        if layer_coll:
-            layer_coll.exclude = True
 
         # 检查形状是否已存在
         mesh = bpy.data.meshes.get(name + "_Mesh")

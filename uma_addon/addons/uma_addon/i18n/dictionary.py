@@ -51,6 +51,8 @@ dictionary = {
         ("Operator", "Auto Twist"):"自动捩骨",
         ("*","Ear"):"耳朵",
         ("*","Bust"):"胸部",
+        ("Operator","Shading"):"着色",
+        ("*","Apply uma shader to the model"):"应用赛马娘着色到模型上",
     }
 }
 

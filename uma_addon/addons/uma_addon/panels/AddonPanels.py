@@ -4,7 +4,9 @@ from ..config import __addon_name__
 from ..operators.AddonOperators import SetBoneCollections, SimplifyArmature, RefineBoneStructure, FixBlushOperator, FixNormalsOperator, ChangeHeadPretreat, ChangeHeadHoldout, ChangeHeadCopyShapeOperator, ChangeHeadNewShapeOperator
 from ..operators.AddonOperators2 import BuildTwistConstraints, ClearTwistConstraints
 from ..operators.GenerateController import GenerateIK, BakeFKtoIK
+from ..operators.Umashader import ApplyShader
 # from ..operators.Physics import DampedTrackProperties
+
 from ....common.i18n.i18n import i18n
 from ....common.types.framework import reg_order
 from ..utils.Config_handling import get_panel_name
@@ -47,6 +49,8 @@ class ModelProcessPanel(BasePanel, bpy.types.Panel):
         row.prop(context.scene, "del_face", toggle=True)
         row.prop(context.scene, "del_others", toggle=True)
         row.operator(SimplifyArmature.bl_idname)
+
+        layout.operator(ApplyShader.bl_idname)
         
         layout.label(text="Fix mini umamusume model:")
         split = layout.split(factor=0.5)
