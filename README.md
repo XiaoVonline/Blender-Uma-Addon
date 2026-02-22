@@ -21,7 +21,7 @@
 
 本插件只是提供一键应用赛马娘着色的功能。如果出现插件一键应用赛马娘着色的效果与原项目不同等由本插件造成的问题，请进行反馈。如果对着色效果有疑问请咨询原作者。
 
-赛马娘着色项目原地址
+赛马娘着色项目原地址，目前使用的是Umashaders v0.2.4，如果更新了可以提醒我一下。
 >https://github.com/LooperHonstropy/BLENDER-Uma-Musume-Pretty-Derby-Shaders
 
 **修复迷你赛马娘模型**  
