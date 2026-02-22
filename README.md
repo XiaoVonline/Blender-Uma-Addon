@@ -40,6 +40,7 @@
 
 **为赛马娘**  
 如果你安装了MikuMikuRig插件，在MMR的主面板下就会出现这个按钮，点击后可以直接为赛马娘生成控制器。
+如果你先安装此插件，后安装MMR，需要重启此插件，这个按钮才能显示。
 >https://github.com/XiaoFFGe/MikuMikuRig  
 >https://wwcb.lanzn.com/b00taqmfwb 密码:6666
 
