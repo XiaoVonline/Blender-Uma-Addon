@@ -9,7 +9,6 @@ import numpy as np
 from bpy.props import BoolProperty
 
 from ..config import __addon_name__
-# from ..preference.AddonPreferences import AddonPreferences
 
 from ..utils.Utils import assign_bone_to_collection
 
@@ -1748,3 +1747,4 @@ class BakeFKtoIK(bpy.types.Operator):
 
         self.report({'INFO'}, "Bake FK to IK successfully")
         return {'FINISHED'}
+
