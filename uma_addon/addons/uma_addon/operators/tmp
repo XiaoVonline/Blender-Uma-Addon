@@ -1,30 +1,5 @@
-import bpy
-import os
-from math import radians, pi ,sin, cos
-from mathutils import Vector
-import logging
-import re
-import addon_utils
-import numpy as np
-from bpy.props import BoolProperty
-
-from ..config import __addon_name__
-# from ..preference.AddonPreferences import AddonPreferences
-
-from ..utils.Utils import assign_bone_to_collection
-
-class MMRRig(bpy.types.Operator):
-    '''Generate MMR controller for umamusume'''
-    bl_idname = "uma.mmr_rig"
-    bl_label = "For Umamusume"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    @classmethod
-    def poll(cls, context: bpy.types.Context):
-        return context.active_object and context.active_object.type == 'ARMATURE'
-
     def execute(self, context: bpy.types.Context):
-        # preset Towards config Twist_bones
+
         context.active_object.select_set(True)
         bpy.ops.uma.refine_bone_structure()
 
@@ -536,69 +511,69 @@ class MMRRig(bpy.types.Operator):
 
         arm_number = 0
 
+        config = {
+            "Arm_L": "upper_arm.L",
+            "Arm_R": "upper_arm.R",
+            "Elbow_L": "forearm.L",
+            "Elbow_R": "forearm.R",
+            "Shoulder_L": "shoulder.L",
+            "Shoulder_R": "shoulder.R",
+            "Thigh_L": "thigh.L",
+            "Thigh_R": "thigh.R",
+            "Knee_L": "shin.L",
+            "Knee_R": "shin.R",
+            "Ankle_offset_L": "foot.L",
+            "Ankle_offset_R": "foot.R",
+            "Toe_L": "toe.L",
+            "Toe_R": "toe.R",
+            "Wrist_L": "hand.L",
+            "Wrist_R": "hand.R",
+            "Hip": "spine",
+            "Waist": "spine.001",
+            "Spine": "spine.002",
+            "Chest": "spine.003",
+            "Neck": "spine.004",
+            "Head": "spine.006",
+            "Eye_L": "eye.L",
+            "Eye_R": "eye.R",
+            "Thumb_01_R": "thumb.01.R",
+            "Thumb_02_R": "thumb.02.R",
+            "Thumb_03_R": "thumb.03.R",
+            "Index_01_R": "f_index.01.R",
+            "Index_02_R": "f_index.02.R",
+            "Index_03_R": "f_index.03.R",
+            "Middle_01_R": "f_middle.01.R",
+            "Middle_02_R": "f_middle.02.R",
+            "Middle_03_R": "f_middle.03.R",
+            "Ring_01_R": "f_ring.01.R",
+            "Ring_02_R": "f_ring.02.R",
+            "Ring_03_R": "f_ring.03.R",
+            "Pinky_01_R": "f_pinky.01.R",
+            "Pinky_02_R": "f_pinky.02.R",
+            "Pinky_03_R": "f_pinky.03.R",
+            "Thumb_01_L": "thumb.01.L",
+            "Thumb_02_L": "thumb.02.L",
+            "Thumb_03_L": "thumb.03.L",
+            "Index_01_L": "f_index.01.L",
+            "Index_02_L": "f_index.02.L",
+            "Index_03_L": "f_index.03.L",
+            "Middle_01_L": "f_middle.01.L",
+            "Middle_02_L": "f_middle.02.L",
+            "Middle_03_L": "f_middle.03.L",
+            "Ring_01_L": "f_ring.01.L",
+            "Ring_02_L": "f_ring.02.L",
+            "Ring_03_L": "f_ring.03.L",
+            "Pinky_01_L": "f_pinky.01.L",
+            "Pinky_02_L": "f_pinky.02.L",
+            "Pinky_03_L": "f_pinky.03.L"
+        }
+
         if not RIG.mmr.Generate_controllers:
 
             # 变换
             Move_location(mmd_arm,RIG)
             # 缩放
             Size_settings(RIG,mmd_arm)
-
-            config = {
-                "Arm_L": "upper_arm.L",
-                "Arm_R": "upper_arm.R",
-                "Elbow_L": "forearm.L",
-                "Elbow_R": "forearm.R",
-                "Shoulder_L": "shoulder.L",
-                "Shoulder_R": "shoulder.R",
-                "Thigh_L": "thigh.L",
-                "Thigh_R": "thigh.R",
-                "Knee_L": "shin.L",
-                "Knee_R": "shin.R",
-                "Ankle_offset_L": "foot.L",
-                "Ankle_offset_R": "foot.R",
-                "Toe_L": "toe.L",
-                "Toe_R": "toe.R",
-                "Wrist_L": "hand.L",
-                "Wrist_R": "hand.R",
-                "Hip": "spine",
-                "Waist": "spine.001",
-                "Spine": "spine.002",
-                "Chest": "spine.003",
-                "Neck": "spine.004",
-                "Head": "spine.006",
-                "Eye_L": "eye.L",
-                "Eye_R": "eye.R",
-                "Thumb_01_R": "thumb.01.R",
-                "Thumb_02_R": "thumb.02.R",
-                "Thumb_03_R": "thumb.03.R",
-                "Index_01_R": "f_index.01.R",
-                "Index_02_R": "f_index.02.R",
-                "Index_03_R": "f_index.03.R",
-                "Middle_01_R": "f_middle.01.R",
-                "Middle_02_R": "f_middle.02.R",
-                "Middle_03_R": "f_middle.03.R",
-                "Ring_01_R": "f_ring.01.R",
-                "Ring_02_R": "f_ring.02.R",
-                "Ring_03_R": "f_ring.03.R",
-                "Pinky_01_R": "f_pinky.01.R",
-                "Pinky_02_R": "f_pinky.02.R",
-                "Pinky_03_R": "f_pinky.03.R",
-                "Thumb_01_L": "thumb.01.L",
-                "Thumb_02_L": "thumb.02.L",
-                "Thumb_03_L": "thumb.03.L",
-                "Index_01_L": "f_index.01.L",
-                "Index_02_L": "f_index.02.L",
-                "Index_03_L": "f_index.03.L",
-                "Middle_01_L": "f_middle.01.L",
-                "Middle_02_L": "f_middle.02.L",
-                "Middle_03_L": "f_middle.03.L",
-                "Ring_01_L": "f_ring.01.L",
-                "Ring_02_L": "f_ring.02.L",
-                "Ring_03_L": "f_ring.03.L",
-                "Pinky_01_L": "f_pinky.01.L",
-                "Pinky_02_L": "f_pinky.02.L",
-                "Pinky_03_L": "f_pinky.03.L"
-            }
 
             # 遍历字典的键值对并打印
             for key, value in config.items():
@@ -1316,435 +1291,4 @@ class MMRRig(bpy.types.Operator):
 
         self.report({'INFO'}, f"生成成功, 匹配骨骼数: {arm_number}")
 
-        return {'FINISHED'}
-
-BONE_MAP = {
-    'Leg_L': {
-        'start': 'Thigh_L', 'mid': 'MCH_Knee_L', 'end': 'Ankle_offset_L', 
-        'ik_name': 'IK_Foot_L', 'pole_name': 'Pole_Knee_L', 
-        'angle': -90
-    },
-    'Leg_R': {
-        'start': 'Thigh_R', 'mid': 'MCH_Knee_R', 'end': 'Ankle_offset_R', 
-        'ik_name': 'IK_Foot_R', 'pole_name': 'Pole_Knee_R', 
-        'angle': -90
-    },
-    'Arm_L': {
-        'start': 'Arm_L', 'mid': 'MCH_Elbow_L', 'end': 'Wrist_L', 
-        'ik_name': 'IK_Hand_L', 'pole_name': 'Pole_Elbow_L', 
-        'angle': 180
-    },
-    'Arm_R': {
-        'start': 'Arm_R', 'mid': 'MCH_Elbow_R', 'end': 'Wrist_R', 
-        'ik_name': 'IK_Hand_R', 'pole_name': 'Pole_Elbow_R', 
-        'angle': 0
-    },
-}
-
-class ControllerProperties(bpy.types.PropertyGroup):
-    auto_twist_bones: BoolProperty(default=False)
-    ik_generated: BoolProperty(default=False)
-
-class GenerateIK(bpy.types.Operator):
-    '''Generate IK controller for umamusume'''
-    bl_idname = "uma.generate_ik"
-    bl_label = "Generate IK"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    @classmethod
-    def poll(cls, context: bpy.types.Context):
-        return context.active_object and context.active_object.type == 'ARMATURE' and len(context.selected_objects) == 1
-
-    def execute(self, context):
-
-        obj = context.active_object
-        bpy.ops.uma.refine_bone_structure()
-
-        # 创建形状
-        square_shape = self.create_widget_shape("WGT_IK_Square", 'Square')
-        pole_shape = self.create_widget_shape("WGT_IK_Pole", 'Dodecahedron')
-
-        bpy.ops.object.mode_set(mode='EDIT')
-        eb = obj.data.edit_bones
-
-        # 创建 MCH 骨骼
-        for key, data in BONE_MAP.items():
-            if data['start'] not in eb: continue
-            start_name = data['start']
-            mid_name = data['mid']
-            end_name = data['end']
-
-            if eb.get(mid_name): continue
-
-            mch_bone = eb.new(mid_name)
-            mch_bone.head = eb.get(start_name).tail
-            mch_bone.tail = eb.get(end_name).head
-            mch_bone.parent = eb.get(start_name)
-            
-        created_data = []
-
-        # 创建 IK 骨骼
-        for key, data in BONE_MAP.items():
-            if data['start'] not in eb: continue
-            
-            # 创建 IK
-            ik_name = data['ik_name']
-            if ik_name not in eb:
-                ik = eb.new(ik_name)
-                target = eb[data['end']]
-                ik.head, ik.tail, ik.roll = target.head, target.tail, target.roll
-                ik.parent = eb.get('Position')
-                created_data.append(data)
-            
-            # 创建 Pole
-            pole_name = data['pole_name']
-            if pole_name not in eb:
-                pole = eb.new(pole_name)
-                mid = eb[data['mid']]
-                if 'Leg' in key:
-                    pole.head = mid.head + Vector((0, -0.5, 0))
-                elif 'Arm' in key:
-                    pole.head = mid.head + Vector((0, 0.3, 0))
-                pole.tail = pole.head + Vector((0, 0, 0.1))
-                if('Knee' in pole_name):
-                    pole.parent = eb[ik_name]
-                elif('Elbow' in pole_name):
-                    pole.parent = eb.get('Position')
-                pole.use_inherit_rotation = False
-
-        bpy.ops.object.mode_set(mode='POSE')
-        pb = obj.pose.bones
-
-        # 创建 IK 约束
-        for data in created_data:
-            mid_name = data['mid']
-            ik_name = data['ik_name']
-            pole_name = data['pole_name']
-            
-            mid_pb = pb.get(mid_name)
-            ik_pb = pb.get(ik_name)
-            pole_pb = pb.get(pole_name)
-            
-            # 分组
-            assign_bone_to_collection(obj, ik_name, "IK")
-            assign_bone_to_collection(obj, pole_name, "IK")
-
-            # 设置形状
-            ik_pb.custom_shape = square_shape
-            if('Foot' in ik_name):
-                ik_pb.custom_shape_scale_xyz = (0.5, 0.9, 1)
-                ik_pb.custom_shape_translation = (0, 0.06, 0)
-            elif('Hand' in ik_name):
-                ik_pb.custom_shape_scale_xyz = (0.5, 0.5, 1)
-                if('_L' in ik_name):
-                    ik_pb.custom_shape_rotation_euler = (radians(20), radians(15), radians(-15))
-                    ik_pb.custom_shape_translation = (0.01, 0.03, 0)
-                elif('_R' in ik_name):
-                    ik_pb.custom_shape_rotation_euler = (radians(20), radians(-15), radians(15))
-                    ik_pb.custom_shape_translation = (-0.01, 0.03, 0)
-
-            pole_pb.custom_shape = pole_shape
-            pole_pb.custom_shape_scale_xyz = (0.15, 0.15, 0.15)
-            
-            # IK 约束
-            const = mid_pb.constraints.get('IK')
-            if not const:
-                const = mid_pb.constraints.new('IK')
-            const.target = obj
-            const.subtarget = ik_name
-            const.pole_target = obj
-            const.pole_subtarget = pole_name
-            const.chain_count = 2
-            const.pole_angle = radians(data['angle'])
-
-        hidden_bones = ['MCH_Elbow_L', 'MCH_Elbow_R', 'MCH_Knee_L', 'MCH_Knee_R']
-        for bone_name in hidden_bones:
-            pbone = pb.get(bone_name)
-            if pbone:
-                pbone.bone.hide = True
-                assign_bone_to_collection(obj, bone_name, "IK")
-
-        bone_coll_name = ['Phys', 'Arm', 'Leg']
-        for n in bone_coll_name:
-            bone_coll = context.active_object.data.collections.get(n)
-            if bone_coll:
-                bone_coll.is_visible = False
-
-        # 复制旋转
-        suffix = ['_L', '_R']
-        for i in suffix:
-            orig_pb = pb.get('Elbow' + i)
-            if not orig_pb: continue
-            cr = orig_pb.constraints.get("COPY_ROTATION")
-            if not cr: 
-                cr = orig_pb.constraints.new('COPY_ROTATION')
-            cr.target = obj
-            cr.subtarget = 'MCH_Elbow' + i
-
-        for i in suffix:
-            orig_pb = pb.get('Knee' + i)
-            if not orig_pb: continue
-            cr = orig_pb.constraints.get("COPY_ROTATION")
-            if not cr: 
-                cr = orig_pb.constraints.new('COPY_ROTATION')
-            cr.target = obj
-            cr.subtarget = 'MCH_Knee' + i
-
-        for i in suffix:
-            orig_pb = pb.get('Wrist' + i)
-            if not orig_pb: continue
-            cr = orig_pb.constraints.get("COPY_ROTATION")
-            if not cr: 
-                cr = orig_pb.constraints.new('COPY_ROTATION')
-            cr.target = obj
-            cr.subtarget = 'IK_Hand' + i
-
-        for i in suffix:
-            orig_pb = pb.get('Ankle_offset' + i)
-            if not orig_pb: continue
-            cr = orig_pb.constraints.get("COPY_ROTATION")
-            if not cr: 
-                cr = orig_pb.constraints.new('COPY_ROTATION')
-            cr.target = obj
-            cr.subtarget = 'IK_Foot' + i
-
-        eyes_config = {
-            'left_eye': 'Eye_L',
-            'right_eye': 'Eye_R',      
-            'ik_master': 'IK_Eyes',
-            'ik_target_L': 'IK_Eye_L',
-            'ik_target_R': 'IK_Eye_R',
-        }
-        self.generate_eye_ik(obj, eyes_config)
-
-        # 锁定骨骼旋转和缩放
-        lock_pb_name = ['IK_Foot_L', 'Pole_Knee_L', 'IK_Foot_R', 'Pole_Knee_R', 'IK_Hand_L', 'Pole_Elbow_L', 'IK_Hand_R', 'Pole_Elbow_R', 'IK_Eyes', 'IK_Eye_L', 'IK_Eye_R'] 
-        for n in lock_pb_name:
-            if pb.get(n):
-                pb.get(n).lock_scale = (True, True, True)
-                pb.get(n).lock_location = (False, False, False)
-                if 'Pole' in n:
-                    pb.get(n).lock_rotation_w = (True)
-                    pb.get(n).lock_rotation = (True, True, True)
-
-        obj.uma_controller.ik_generated = True
-        self.report({'INFO'}, "IK Rig Generated")
-        return {'FINISHED'}
-    
-    def generate_eye_ik(self, obj, eyes_config):
-
-        # 进入编辑模式创建骨骼
-        bpy.ops.object.mode_set(mode='EDIT')
-        eb = obj.data.edit_bones
-
-        # 检查基础骨骼是否存在
-        if eyes_config['left_eye'] not in eb or eyes_config['right_eye'] not in eb:
-            print("Eye bones not found, skipping Eye IK generation.")
-            return
-
-        # 获取坐标参考
-        eye_l = eb[eyes_config['left_eye']]
-        eye_r = eb[eyes_config['right_eye']]
-        
-        # 计算眼睛中心点和前方偏移位置
-        eye_center = (eye_l.head + eye_r.head) / 2
-        forward_offset = Vector((0, -0.3, 0))
-        bone_scale = 0.1747 * (eye_l.head - eye_r.head).length
-        master_scale = (0.28878 * (eye_l.head - eye_r.head).length + 0.00166 ) / bone_scale
-        lr_scale = 0.488 * master_scale
-        
-        # 创建总控制器
-        ik_master_name = eyes_config['ik_master']
-        if ik_master_name not in eb:
-            ik_master = eb.new(ik_master_name)
-            ik_master.head = eye_center + forward_offset
-            ik_master.tail = ik_master.head + Vector((0, 0, bone_scale))
-            ik_master.parent = None
-        
-        # 创建左右眼独立控制器
-        for org_name, ik_name in [(eyes_config['left_eye'], eyes_config['ik_target_L']), (eyes_config['right_eye'], eyes_config['ik_target_R'])]:
-            if ik_name not in eb:
-                ik_target = eb.new(ik_name)
-                org_bone = eb[org_name]
-                ik_target.head = org_bone.head + forward_offset
-                ik_target.tail = ik_target.head + Vector((0, 0, bone_scale))
-                # 父级设为总控制器
-                ik_target.parent = eb[ik_master_name]
-
-        # 进入姿态模式设置约束和形状
-        bpy.ops.object.mode_set(mode='POSE')
-        pb = obj.pose.bones
-
-        # 设置总控制器形状和组
-        p_master = pb.get(eyes_config['ik_master'])
-        if p_master:
-            p_master.custom_shape = self.create_widget_shape("WGT_IK_Eyes", 'Eyes')
-            p_master.custom_shape_scale_xyz = (master_scale, master_scale, 1)
-            assign_bone_to_collection(obj, p_master.name, "IK")
-
-        # 设置子控制器形状和组
-        for ik_name in [eyes_config['ik_target_L'], eyes_config['ik_target_R']]:
-            p_target = pb.get(ik_name)
-            if p_target:
-                p_target.custom_shape = self.create_widget_shape("WGT_IK_Circle", 'Circle')
-                p_target.custom_shape_scale_xyz = (lr_scale, lr_scale, 1)
-                assign_bone_to_collection(obj, p_target.name, "IK")
-
-        # 添加约束
-        for org_name, target_name in [(eyes_config['left_eye'], eyes_config['ik_target_L']), (eyes_config['right_eye'], eyes_config['ik_target_R'])]:
-            p_org = pb.get(org_name)
-            p_target = pb.get(target_name)
-            
-            if p_org and p_target:
-                # 清理约束
-                for con in p_org.constraints:
-                    p_org.constraints.remove(con)
-                
-                # 添加阻尼追踪
-                con = p_org.constraints.new('DAMPED_TRACK')
-                con.target = obj
-                con.subtarget = target_name
-                con.track_axis = 'TRACK_Y'
-                con.head_tail = 0.0
-                p_org.bone.hide = True
-
-    def create_widget_shape(self, name, shape_type):
-
-        coll = bpy.data.collections.get("WGTS_UMA")
-        if not coll:
-            coll = bpy.data.collections.new("WGTS_UMA")
-        coll.hide_viewport = True
-
-        # 检查形状是否已存在
-        mesh = bpy.data.meshes.get(name + "_Mesh")
-        if not mesh:
-            mesh = bpy.data.meshes.new(name + "_Mesh")
-        
-        obj = bpy.data.objects.get(name)
-        if not obj:
-            obj = bpy.data.objects.new(name, mesh)
-            coll.objects.link(obj)
-        else:
-            # 确保它在集合里
-            if obj.name not in coll.objects:
-                coll.objects.link(obj)
-        
-        verts = []
-        edges = []
-        
-        if shape_type == 'Square':
-            verts = [(1.0, -1.0, 0.0), (1.0, 1.0, 0.0), (-1.0, 1.0, 0.0), (-1.0, -1.0, 0.0)]
-            edges = [(0, 1), (1, 2), (2, 3), (3, 0)]
-            
-        elif shape_type == 'Octahedron':
-            verts = [(1.0, 0.0, 0.0), (-1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, -1.0, 0.0), (0.0, 0.0, 1.0), (0.0, 0.0, -1.0)]
-            edges = [(0, 2), (0, 3), (0, 4), (0, 5), (1, 2), (1, 3), (1, 4), (1, 5), (2, 4), (2, 5), (3, 4), (3, 5)]
-
-        elif shape_type == 'Dodecahedron':
-            verts = [(-1.0, -1.0, -1.0), (-1.0, -1.0, 1.0), (-1.0, 1.0, -1.0), (-1.0, 1.0, 1.0), (1.0, -1.0, -1.0), (1.0, -1.0, 1.0), (1.0, 1.0, -1.0), (1.0, 1.0, 1.0), (0.0, -0.6180340051651001, -1.6180340051651), (0.0, -0.6180340051651001, 1.6180340051651), (0.0, 0.6180340051651001, -1.6180340051651), (0.0, 0.6180340051651001, 1.6180340051651), (-0.6180340051651001, -1.6180340051651, 0.0), (-0.6180340051651001, 1.6180340051651, 0.0), (0.6180340051651001, -1.6180340051651, 0.0), (0.6180340051651001, 1.6180340051651, 0.0), (-1.6180340051651, 0.0, -0.6180340051651001), (-1.6180340051651, 0.0, 0.6180340051651001), (1.6180340051651, 0.0, -0.6180340051651001), (1.6180340051651, 0.0, 0.6180340051651001)]
-            edges = [[0, 8], [0, 12], [0, 16], [1, 9], [1, 12], [1, 17], [2, 10], [2, 13], [2, 16], [3, 11], [3, 13], [3, 17], [4, 8], [4, 14], [4, 18], [5, 9], [5, 14], [5, 19], [6, 10], [6, 15], [6, 18], [7, 11], [7, 15], [7, 19], [8, 10], [9, 11], [12, 14], [13, 15], [16, 17], [18, 19]]
-
-        elif shape_type == 'Eyes': 
-            verts = [(0.8928930759429932, -0.7071065902709961, 0.0), (0.8928932547569275, 0.7071067690849304, 0.0), (-1.8588197231292725, -0.9659252762794495, 0.0), (-2.100001096725464, -0.8660248517990112, 0.0), (-2.3071072101593018, -0.7071059942245483, 0.0), (-2.4660258293151855, -0.49999913573265076, 0.0), (-2.5659260749816895, -0.258818119764328, 0.0), (-2.5999999046325684, 8.575012770961621e-07, 0.0), (-2.5659255981445312, 0.2588198482990265, 0.0), (-2.4660253524780273, 0.5000006556510925, 0.0), (-2.3071064949035645, 0.7071075439453125, 0.0), (-2.099999189376831, 0.866025984287262, 0.0), (-1.8588184118270874, 0.9659261703491211, 0.0), (-1.5999996662139893, 1.000000238418579, 0.0), (-1.341180443763733, 0.9659258723258972, 0.0), (-1.0999995470046997, 0.8660253882408142, 0.0), (-0.8928929567337036, 0.7071067094802856, 0.0), (-0.892893373966217, -0.7071066498756409, 0.0), (-1.100000262260437, -0.8660252690315247, 0.0), (-1.3411810398101807, -0.9659255743026733, 0.0), (1.600000023841858, 1.0, 0.0), (1.3411810398101807, 0.9659258127212524, 0.0), (1.100000023841858, 0.8660253882408142, 0.0), (-1.600000262260437, -0.9999997615814209, 0.0), (1.0999997854232788, -0.8660252690315247, 0.0), (1.341180682182312, -0.9659257531166077, 0.0), (1.5999996662139893, -1.0, 0.0), (1.8588186502456665, -0.965925931930542, 0.0), (2.0999996662139893, -0.8660256266593933, 0.0), (2.3071064949035645, -0.7071071863174438, 0.0), (2.4660253524780273, -0.5000002980232239, 0.0), (2.5659255981445312, -0.25881943106651306, 0.0), (2.5999999046325684, -4.649122899991198e-07, 0.0), (2.5659260749816895, 0.25881853699684143, 0.0), (2.4660258293151855, 0.4999994933605194, 0.0), (2.3071072101593018, 0.707106351852417, 0.0), (2.1000006198883057, 0.8660250902175903, 0.0), (1.8588197231292725, 0.9659256339073181, 0.0), (-1.8070557117462158, -0.7727401852607727, 0.0), (-2.0000009536743164, -0.6928198337554932, 0.0), (-2.1656856536865234, -0.5656847357749939, 0.0), (-2.292820692062378, -0.3999992609024048, 0.0), (-2.3727407455444336, -0.20705445110797882, 0.0), (-2.3999998569488525, 7.336847716032935e-07, 0.0), (-2.3727405071258545, 0.207055926322937, 0.0), (-2.2928202152252197, 0.40000057220458984, 0.0), (-2.1656851768493652, 0.5656861066818237, 0.0), (-1.9999992847442627, 0.6928208470344543, 0.0), (-1.8070547580718994, 0.7727410197257996, 0.0), (-1.5999996662139893, 0.8000002503395081, 0.0), (-1.3929443359375, 0.7727407813072205, 0.0), (-1.1999995708465576, 0.6928203701972961, 0.0), (-1.0343143939971924, 0.5656854510307312, 0.0), (-1.0343146324157715, -0.5656852722167969, 0.0), (-1.2000001668930054, -0.6928201913833618, 0.0), (-1.3929448127746582, -0.7727404236793518, 0.0), (-1.6000001430511475, -0.7999997735023499, 0.0), (1.8070557117462158, 0.772739827632904, 0.0), (2.0000009536743164, 0.6928195953369141, 0.0), (2.1656856536865234, 0.5656843781471252, 0.0), (2.292820692062378, 0.39999890327453613, 0.0), (2.3727407455444336, 0.20705409348011017, 0.0), (2.3999998569488525, -1.0960745839838637e-06, 0.0), (2.3727405071258545, -0.20705628395080566, 0.0), (2.2928202152252197, -0.4000009298324585, 0.0), (2.1656851768493652, -0.5656863451004028, 0.0), (1.9999992847442627, -0.692821204662323, 0.0), (1.8070547580718994, -0.7727413773536682, 0.0), (1.5999996662139893, -0.8000004887580872, 0.0), (1.3929443359375, -0.7727410197257996, 0.0), (1.1999995708465576, -0.6928204894065857, 0.0), (1.0343143939971924, -0.5656855702400208, 0.0), (1.0343146324157715, 0.5656850337982178, 0.0), (1.2000004053115845, 0.6928199529647827, 0.0), (1.3929448127746582, 0.7727401852607727, 0.0), (1.6000001430511475, 0.7999995350837708, 0.0)]
-            edges = [[24, 0], [1, 22], [16, 1], [17, 0], [23, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [8, 9], [9, 10], [10, 11], [11, 12], [12, 13], [21, 20], [22, 21], [13, 14], [14, 15], [15, 16], [17, 18], [18, 19], [19, 23], [25, 24], [26, 25], [27, 26], [28, 27], [29, 28], [30, 29], [31, 30], [32, 31], [33, 32], [34, 33], [35, 34], [36, 35], [37, 36], [20, 37], [56, 38], [38, 39], [39, 40], [40, 41], [41, 42], [42, 43], [43, 44], [44, 45], [45, 46], [46, 47], [47, 48], [48, 49], [49, 50], [50, 51], [51, 52], [53, 54], [54, 55], [55, 56], [75, 57], [57, 58], [58, 59], [59, 60], [60, 61], [61, 62], [62, 63], [63, 64], [64, 65], [65, 66], [66, 67], [67, 68], [68, 69], [69, 70], [70, 71], [72, 73], [73, 74], [74, 75], [52, 72], [53, 71]]
-
-        elif shape_type == 'Circle':
-            res = 32
-            for i in range(res):
-                angle = 2 * pi * i / res
-                verts.append((cos(angle), sin(angle), 0.0))
-                if i > 0: edges.append((i-1, i))
-            edges.append((res-1, 0))
-
-        # 更新网格数据
-        mesh.clear_geometry()
-        mesh.from_pydata(verts, edges, [])
-        mesh.update()
-        return obj
-
-class BakeFKtoIK(bpy.types.Operator):
-    '''Bake FK motion to IK controller within scene frame range'''
-    bl_idname = "uma.bake_fk_to_ik"
-    bl_label = "Bake FK to IK"
-    bl_options = {'REGISTER', 'UNDO'}
-
-    @classmethod
-    def poll(cls, context: bpy.types.Context):
-        return context.active_object is not None and context.active_object.type == 'ARMATURE' and len(context.selected_objects) == 1 and context.active_object.uma_controller.ik_generated
-
-    def execute(self, context):
-
-        orig_obj = context.active_object
-        current_mode = orig_obj.mode
-
-        for _, data in BONE_MAP.items():
-            if not data['ik_name'] in orig_obj.pose.bones :
-                self.report({'ERROR'}, "IK not found")
-                return {'CANCELLED'}
-            if not data['pole_name'] in orig_obj.pose.bones :
-                self.report({'ERROR'}, "Pole not found")
-                return {'CANCELLED'}
-            if not data['mid'] in orig_obj.pose.bones :
-                self.report({'ERROR'}, "MCH not found")
-                return {'CANCELLED'}
-
-        # 复制当前骨架
-        if current_mode != 'OBJECT':
-            bpy.ops.object.mode_set(mode='OBJECT')
-        bpy.ops.object.duplicate()
-        tmp_obj = context.active_object
-
-        # 清理约束
-        for pb in tmp_obj.pose.bones:
-            for con in pb.constraints:
-                pb.constraints.remove(con)
-
-        context.view_layer.objects.active = orig_obj
-        bpy.ops.object.mode_set(mode='POSE')
-        bpy.ops.pose.select_all(action='DESELECT')
-        
-        for _, data in BONE_MAP.items():
-            ik_name = data['ik_name']
-            pole_name = data['pole_name']
-            fk_end_name = data['end']
-            fk_mid_name = data['mid']
-            
-            # IK 控制器吸附到临时骨架的 FK 末端
-            pb = orig_obj.pose.bones[ik_name]
-            c = pb.constraints.new('COPY_TRANSFORMS')
-            c.target = tmp_obj
-            c.subtarget = fk_end_name
-            # 选中 IK 控制器
-            pb.bone.select = True
-
-            pb = orig_obj.pose.bones[pole_name]
-            c = pb.constraints.new('COPY_LOCATION')
-            c.target = tmp_obj
-            c.subtarget = fk_mid_name
-            pb.bone.select = True
-
-        bpy.ops.nla.bake(
-            frame_start=context.scene.frame_start,
-            frame_end=context.scene.frame_end,
-            step=1,
-            only_selected=True,
-            visual_keying=True,
-            clear_constraints=True,
-            clear_parents=True,
-            use_current_action=True,
-            clean_curves=True,
-            bake_types = {'POSE'},
-            channel_types= {'LOCATION', 'ROTATION'}
-        )
-
-        # 删除临时骨架
-        bpy.ops.object.mode_set(mode='OBJECT')
-        bpy.ops.object.select_all(action='DESELECT')
-        tmp_obj.select_set(True)
-        bpy.ops.object.delete()
-
-        if orig_obj.mode != current_mode:
-            bpy.ops.object.mode_set(mode=current_mode)
-
-        self.report({'INFO'}, "Bake FK to IK successfully")
         return {'FINISHED'}

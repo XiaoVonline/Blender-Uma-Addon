@@ -600,9 +600,9 @@ class RefineBoneStructure(bpy.types.Operator):
         context.view_layer.objects.active = armature_obj
         return True
    
-class FixBlushOperator(bpy.types.Operator):
+class FixBlush(bpy.types.Operator):
     '''Fix blush of mini umamusume model'''
-    bl_idname = "object.miniuma_fixblush_ops"
+    bl_idname = "miniuma.fixblush"
     bl_label = "Fix Blush"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -726,9 +726,9 @@ class FixBlushOperator(bpy.types.Operator):
         self.report({'INFO'}, "Blush fixed successfully")
         return {'FINISHED'}
 
-class FixNormalsOperator(bpy.types.Operator):
+class FixNormal(bpy.types.Operator):
     '''Fix normals of mini umamusume model'''
-    bl_idname = "object.miniuma_fixnormals_ops"
+    bl_idname = "miniuma.fixnormal"
     bl_label = "Fix Normals"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -764,20 +764,11 @@ class FixNormalsOperator(bpy.types.Operator):
         bpy.ops.mesh.separate(type='LOOSE')
         bpy.ops.object.mode_set(mode='OBJECT')
 
+        print(bpy.app.version_string)
+
         if len(context.selected_objects) == 2:
-            if "Goo Engine" in bpy.app.version_string:
-                bpy.data.objects.remove(context.selected_objects[-1], do_unlink=True)
-
-                vertices_to_select = [67, 68, 77, 78, 79, 80, 81, 82, 84, 94, 102, 103, 105, 107, 121, 122, 123, 124, 125, 127, 128, 131, 133, 134, 159, 164, 166, 167, 209, 212, 213, 216, 217, 222, 224, 231, 256, 257, 261, 262, 263, 267, 269, 374, 375, 377, 378, 379, 380, 382]
-
-            else:
-                # 删除活动项，并将选中项命名为活动项的名称
-                old_name = context.active_object.name
-                bpy.data.objects.remove(context.selected_objects[0], do_unlink=True)
-                context.selected_objects[0].name = old_name
-
-                vertices_to_select = [149, 151, 152, 153, 154, 156, 157, 262, 264, 268, 269, 270, 274, 275, 300, 307, 309, 314, 315, 318, 319, 322, 364, 365, 367, 372, 397, 398, 400, 403, 404, 406, 407, 408, 409, 410, 424, 426, 428, 429, 437, 447, 449, 450, 451, 452, 453, 454, 463, 464]
-
+            bpy.data.objects.remove(context.selected_objects[-1], do_unlink=True)
+            vertices_to_select = [67, 68, 77, 78, 79, 80, 81, 82, 84, 94, 102, 103, 105, 107, 121, 122, 123, 124, 125, 127, 128, 131, 133, 134, 159, 164, 166, 167, 209, 212, 213, 216, 217, 222, 224, 231, 256, 257, 261, 262, 263, 267, 269, 374, 375, 377, 378, 379, 380, 382]
         else:
             if context.selected_objects[0].parent:
                 for obj in context.selected_objects[0].parent.children:
@@ -795,10 +786,7 @@ class FixNormalsOperator(bpy.types.Operator):
                     obj.select_set(False)
 
         # 将face对象设定为活动项
-        if "Goo Engine" in bpy.app.version_string:
-            context.view_layer.objects.active = context.selected_objects[-1]
-        else:
-            context.view_layer.objects.active = context.selected_objects[0]
+        context.view_layer.objects.active = context.selected_objects[-1]
 
         bpy.ops.object.join()
         obj = bpy.context.active_object

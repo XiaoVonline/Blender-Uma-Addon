@@ -1,7 +1,7 @@
 import bpy
 
 from ..config import __addon_name__
-from ..operators.AddonOperators import SetBoneCollections, SimplifyArmature, RefineBoneStructure, FixBlushOperator, FixNormalsOperator, ChangeHeadPretreat, ChangeHeadHoldout, ChangeHeadCopyShapeOperator, ChangeHeadNewShapeOperator
+from ..operators.AddonOperators import SetBoneCollections, SimplifyArmature, RefineBoneStructure, FixBlush, FixNormal, ChangeHeadPretreat, ChangeHeadHoldout, ChangeHeadCopyShapeOperator, ChangeHeadNewShapeOperator
 from ..operators.AddonOperators2 import BuildTwistConstraints, ClearTwistConstraints
 from ..operators.GenerateController import GenerateIK, BakeFKtoIK
 from ..operators.Umashader import ApplyShader
@@ -54,8 +54,8 @@ class ModelProcessPanel(BasePanel, bpy.types.Panel):
         
         layout.label(text="Fix mini umamusume model:")
         split = layout.split(factor=0.5)
-        split.operator(FixBlushOperator.bl_idname)
-        split.operator(FixNormalsOperator.bl_idname)
+        split.operator(FixBlush.bl_idname)
+        split.operator(FixNormal.bl_idname)
 
     @classmethod
     def poll(cls, context: bpy.types.Context):

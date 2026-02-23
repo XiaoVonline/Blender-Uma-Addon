@@ -1,4 +1,4 @@
-from .uma_addon.addons.uma_addon import register as addon_register, unregister as addon_unregister
+from uma_addon.addons.uma_addon import register as addon_register, unregister as addon_unregister
 
 bl_info = {
     "name": 'UMA Addon',
