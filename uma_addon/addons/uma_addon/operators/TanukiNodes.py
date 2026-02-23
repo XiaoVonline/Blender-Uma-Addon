@@ -68,7 +68,7 @@ class Refresh_Tanuki_Texture(Operator):
         return {'FINISHED'}
 
 class Tanuki_Texture(ShaderNodeCustomGroup):
-    bl_idname = 'uma.tanuki_texture'
+    bl_idname = 'uma.tanukitexture' # 不要修改节点的bl_idname，否则会导致用户现有节点丢失数据
     bl_label = 'Tanuki Texture'
     
     def update_path(self, context):
@@ -282,7 +282,7 @@ class Tanuki_Texture(ShaderNodeCustomGroup):
             layout.prop(self, "offset")
 
 class Tanuki_Switch(ShaderNodeCustomGroup):
-    bl_idname = 'uma.tanuki_switch'
+    bl_idname = 'uma.tanukiswitch'
     bl_label = 'Tanuki Switch'
    
     _is_updating = False
@@ -463,3 +463,4 @@ def scene_frame_change_handler(scene, depsgraph=None):
                 node.update_seq_idx(scene)
             elif node.bl_idname == 'uma.tanukiswitch':
                 node.update_frame_index()
+
