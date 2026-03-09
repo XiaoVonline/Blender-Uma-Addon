@@ -83,4 +83,4 @@ def get_panel_name() -> str:
 
     :return str: N panel name
     """
-    return get_config_parameter("Addon Settings", "panel_name", fallback="MMD")
+    return get_config_parameter("Addon Settings", "panel_name", fallback="UMA")

@@ -147,8 +147,6 @@ class Tanuki_Texture(ShaderNodeCustomGroup):
             if not os.path.exists(abs_path):
                 self.error_message = "File not exist"
                 return
-            
-            # 生成缓存目录路径
             path_hash = hashlib.md5(abs_path.encode('utf-8')).hexdigest()
             cache_dir = os.path.join(tempfile.gettempdir(), "tanuki_cache", path_hash)
 
@@ -463,4 +461,3 @@ def scene_frame_change_handler(scene, depsgraph=None):
                 node.update_seq_idx(scene)
             elif node.bl_idname == 'uma.tanukiswitch':
                 node.update_frame_index()
-

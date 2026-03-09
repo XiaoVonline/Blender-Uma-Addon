@@ -1,9 +1,7 @@
 import bpy
 import bmesh
-from math import radians
 
 from ..config import __addon_name__
-# from ..preference.AddonPreferences import AddonPreferences
 
 class SelectUnassignedMeshes(bpy.types.Operator):
     """选择所有没有材质分配的网格对象"""
@@ -280,7 +278,6 @@ class SyncShapekeys(bpy.types.Operator):
         return context.active_object and context.active_object.type == 'MESH' and len(context.selected_objects) >= 2 
     
     def execute(self, context: bpy.types.Context):
-
         source_obj = context.active_object
         target_objs = [obj for obj in context.selected_objects if obj != source_obj and obj.type == 'MESH' and obj.data.shape_keys]
 
@@ -305,85 +302,43 @@ class SyncShapekeys(bpy.types.Operator):
                 driver.expression = var.name
         return {'FINISHED'}
 
-TWIST_CONFIG = {
-    'ShoulderRoll': {'up':'Shoulder', 'up_influ':0, 'down':'Arm', 'down_influ':-0.3},
-    'ArmRoll': {'up':'Elbow', 'up_influ':0, 'down':'Wrist', 'down_influ':0.5},
-}
-
-class BuildTwistConstraints(bpy.types.Operator):
-    bl_idname = "uma.build_twist_constraints"
-    bl_label = "Build Twist Constraints"
+class RemoveBoneConstraints(bpy.types.Operator):
+    bl_idname = "uma.remove_bone_constraints"
+    bl_label = "Remove Bone Constraints"
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context: bpy.types.Context):
-        return context.active_object and context.active_object.type == 'ARMATURE' and len(context.selected_objects) == 1
-
-    def execute(self, context):
-        arm = context.active_object
-        for suffix in ['_L', '_R']:
-            for bone_name, target_name in TWIST_CONFIG.items():
-                if bone_name + suffix in arm.pose.bones:
-                    pbone = arm.pose.bones[bone_name + suffix]
-                    
-                    c = pbone.constraints.new(type='TRANSFORM')
-                    c.name += __addon_name__
-                    c.target = arm
-                    c.subtarget = target_name['up'] + suffix
-                    c.map_from = 'ROTATION'
-                    c.map_to = 'ROTATION'
-                    c.target_space = 'LOCAL'
-                    c.owner_space = 'LOCAL'
-                    c.from_rotation_mode = 'QUATERNION'
-                    c.from_min_y_rot = radians(-180)
-                    c.from_max_y_rot = radians(180)
-                    c.map_to_x_from = 'Y'
-                    c.to_min_x_rot = radians(-180) * target_name['up_influ']
-                    c.to_max_x_rot = radians(180) * target_name['up_influ']
-
-                    c = pbone.constraints.new(type='TRANSFORM')
-                    c.name += __addon_name__
-                    c.target = arm
-                    c.subtarget = target_name['down'] + suffix
-                    c.map_from = 'ROTATION'
-                    c.map_to = 'ROTATION'
-                    c.target_space = 'LOCAL'
-                    c.owner_space = 'LOCAL'
-                    c.from_rotation_mode = 'QUATERNION'
-                    c.from_min_y_rot = radians(-180)
-                    c.from_max_y_rot = radians(180)
-                    c.map_to_x_from = 'Y'
-                    c.to_min_x_rot = radians(-180) * target_name['down_influ']
-                    c.to_max_x_rot = radians(180) * target_name['down_influ']
-
-                    c = pbone.constraints.new(type='LIMIT_ROTATION')
-                    c.name += __addon_name__
-                    c.owner_space = 'LOCAL'
-                    c.use_limit_x, c.use_limit_y, c.use_limit_z = False, True, True
-
-        arm.uma_controller.auto_twist_bones = True
-        self.report({'INFO'}, "Twist bone constraints built")
+        return context.active_object and context.active_object.type == 'ARMATURE' and context.active_object.mode == 'POSE'
+    
+    def execute(self, context: bpy.types.Context):
+        bones = context.active_object.pose.bones
+        for bone in bones:
+            if bone.constraints:
+                while len(bone.constraints) > 0:
+                    bone.constraints.remove(bone.constraints[0])
         return {'FINISHED'}
 
-class ClearTwistConstraints(bpy.types.Operator):
-    bl_idname = "uma.clear_twist_constraints"
-    bl_label = "Clear Twist Constraints"
+class GroupFcurvesByBone(bpy.types.Operator):
+    bl_idname = "uma.group_fcurves_by_bone"
+    bl_label = "Group Fcurves By Bone"
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context: bpy.types.Context):
-        return context.active_object and context.active_object.type == 'ARMATURE' and len(context.selected_objects) == 1
+        return context.active_object and context.active_object.type == 'ARMATURE' and context.active_object.mode == 'POSE'
 
-    def execute(self, context):
-        arm = context.active_object
-        for suffix in ['_L', '_R']:
-            for bone_name in TWIST_CONFIG.keys():
-                if bone_name + suffix in arm.pose.bones:
-                    pbone = arm.pose.bones[bone_name + suffix ]
-                    for c in reversed(pbone.constraints):
-                        if __addon_name__ in c.name:
-                            pbone.constraints.remove(c)
-                            
-        arm.uma_controller.auto_twist_bones = False
-        self.report({'INFO'}, "Twist bone constraints cleared")
+    def execute(self, context: bpy.types.Context):
+        action = context.active_object.animation_data.action
+        for fcurve in action.fcurves:
+            if fcurve.group: continue
+            # 针对骨骼的通道进行处理
+            if "pose.bones" in fcurve.data_path:
+                # 提取骨骼名称
+                bone_name = fcurve.data_path.split('"')[1]
+                # 如果该骨骼组不存在，则创建它
+                if bone_name not in action.groups:
+                    action.groups.new(bone_name)
+                # 将曲线分配给该组
+                fcurve.group = action.groups[bone_name]
         return {'FINISHED'}

@@ -1,6 +1,6 @@
 schema_version = "1.0.0"
 id = "uma_addon"
-version = "2.6.0"
+version = "2.6.1"
 name = "UMA Addon"
 tagline = "Streamline the workflow for umamusume models"
 maintainer = "小微在线上"

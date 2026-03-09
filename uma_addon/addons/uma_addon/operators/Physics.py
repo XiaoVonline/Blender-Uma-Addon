@@ -12,7 +12,7 @@ class DampedTrackProperties(bpy.types.PropertyGroup):
     def get_enable(bone_names):
         def get(self):
             arm = bpy.context.active_object
-            if arm is None:
+            if arm is None or arm.type != 'ARMATURE':
                 return False
             for bone_name in bone_names:
                 if bone_name in arm.pose.bones:
@@ -27,7 +27,7 @@ class DampedTrackProperties(bpy.types.PropertyGroup):
     def set_enable(bone_names):
         def set(self, value):
             arm = bpy.context.active_object
-            if arm is None:
+            if arm is None or arm.type != 'ARMATURE':
                 return
             if value:
                 # 添加约束

@@ -1,9 +1,10 @@
 from ..config import __addon_name__
-from ..operators.AddonOperators2 import SelectUnassignedMeshes, MarkCollectionCenter, PrintSelectedVertices, PrintSelectedBones, PrintAllBones, MeshToPython, CombineShapekeys, SyncShapekeys
-from ..operators.GenerateController import MMRRig
+from ..operators.AddonOperators2 import SelectUnassignedMeshes, MarkCollectionCenter, PrintSelectedVertices, PrintSelectedBones, PrintAllBones, MeshToPython, CombineShapekeys, SyncShapekeys, RemoveBoneConstraints
+from ..operators.Controller import MMRRig
 from ..operators.TanukiNodes import Tanuki_Texture, Tanuki_Switch
 from ....common.i18n.i18n import i18n
 from ....common.types.framework import reg_order
+from ..image.ImageManager import get_image_id
 from ..preference.AddonPreferences import AddonPreferences
 
 def View3dObject_menu(self, context):
@@ -27,13 +28,14 @@ def View3dPose_menu(self, context):
         self.layout.separator()
         self.layout.operator(PrintSelectedBones.bl_idname)
         self.layout.operator(PrintAllBones.bl_idname)
+        self.layout.operator(RemoveBoneConstraints.bl_idname)    
 
 def Outliner_menu(self, context):
     self.layout.separator()
     self.layout.operator(MarkCollectionCenter.bl_idname, icon='ASSET_MANAGER')
 
 def MMR_XFFGL_menu(self, context):
-    self.layout.operator(MMRRig.bl_idname, icon='OUTLINER_DATA_ARMATURE')
+    self.layout.operator(MMRRig.bl_idname, icon_value=get_image_id("ctrl"))
 
 # 节点菜单
 def TanukiTexture_menu(self, context):

@@ -1,12 +1,10 @@
 import bpy
-import os
 import mathutils
 import math
 import bmesh
 from mathutils import Vector
 
 from ..config import __addon_name__
-# from ..preference.AddonPreferences import AddonPreferences
 
 from ..utils.Utils import assign_bone_to_collection
 
@@ -19,7 +17,7 @@ class SetBoneCollections(bpy.types.Operator):
     @classmethod
     def poll(cls, context: bpy.types.Context):
         # 检查当前上下文是否有选中的对象，并且该对象是骨架类型
-        return context.active_object and context.active_object.type == 'ARMATURE' and len(context.selected_objects) == 1
+        return context.active_object and context.active_object.type == 'ARMATURE'
 
     def execute(self, context: bpy.types.Context):
 
@@ -248,12 +246,10 @@ class SimplifyArmature(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context: bpy.types.Context):
-        return context.active_object is not None and context.active_object.type == 'ARMATURE' and context.scene.del_handle | context.scene.del_face | context.scene.del_others and len(context.selected_objects) == 1
+        uma_scene = context.scene.uma_scene
+        return context.active_object and context.active_object.type == 'ARMATURE' and uma_scene.del_handle | uma_scene.del_face | uma_scene.del_others
 
-    def transfer_weights_to_head(self, armature_obj, bone_names_to_remove):
-        """Transfer vertex weights from specified bones to the Head bone"""
-        head_bone_name = "Head"
-        
+    def transfer_weights_to_head(self, armature_obj, bone_names_to_remove):       
         # 获取所有使用当前骨架的网格对象
         mesh_objs = []
         for obj in bpy.context.scene.objects:
@@ -269,9 +265,9 @@ class SimplifyArmature(bpy.types.Operator):
                 continue
             
             # 获取或创建Head顶点组
-            head_vg = obj.vertex_groups.get(head_bone_name)
+            head_vg = obj.vertex_groups.get("Head")
             if not head_vg:
-                head_vg = obj.vertex_groups.new(name=head_bone_name)
+                head_vg = obj.vertex_groups.new(name="Head")
             
             # 遍历所有顶点
             for vertex in obj.data.vertices:
@@ -288,7 +284,7 @@ class SimplifyArmature(bpy.types.Operator):
                     # 获取当前Head权重
                     current_head_weight = 0.0
                     for group in vertex.groups:
-                        if obj.vertex_groups[group.group].name == head_bone_name:
+                        if obj.vertex_groups[group.group].name == "Head":
                             current_head_weight = group.weight
                             break
                     
@@ -308,8 +304,9 @@ class SimplifyArmature(bpy.types.Operator):
         data = arm_obj.data
         current_mode = arm_obj.mode
         count = 0
+        uma_scene = context.scene.uma_scene
 
-        if context.scene.del_handle:
+        if uma_scene.del_handle:
             # 删除名为"Handle"的骨骼集合中的所有骨骼
             if current_mode != 'OBJECT':
                 bpy.ops.object.mode_set(mode='OBJECT')
@@ -328,7 +325,7 @@ class SimplifyArmature(bpy.types.Operator):
                         count += 1
                 data.collections.remove(collection_to_remove)
 
-        if context.scene.del_face:
+        if uma_scene.del_face:
             # 删除名为"Face"的骨骼集合中的所有骨骼
             bpy.ops.object.mode_set(mode='OBJECT')
             collection_to_remove = data.collections.get("Face")
@@ -351,7 +348,7 @@ class SimplifyArmature(bpy.types.Operator):
                         count += 1
                 data.collections.remove(collection_to_remove)
 
-        if context.scene.del_others:
+        if uma_scene.del_others:
             # 删除名为"Others"的骨骼集合中的所有骨骼
             bpy.ops.object.mode_set(mode='OBJECT')
             collection_to_remove = data.collections.get("Others")
@@ -397,56 +394,78 @@ class RefineBoneStructure(bpy.types.Operator):
 
     @classmethod
     def poll(cls, context: bpy.types.Context):
-        return context.active_object and context.active_object.type == 'ARMATURE' and len(context.selected_objects) == 1
+        return context.active_object and context.active_object.type == 'ARMATURE'
 
     def execute(self, context: bpy.types.Context):
 
-        armature_obj = context.active_object
-        original_mode = armature_obj.mode
-
+        arm_obj = context.active_object
+        original_mode = arm_obj.mode
+        ebs = arm_obj.data.edit_bones
         # 检测是否存在眼部骨骼
-        if 'Eye_L' not in armature_obj.data.bones or 'Eye_R' not in armature_obj.data.bones:
-            self.report({'ERROR'}, "Eye bones not found")
-            return {'CANCELLED'}
+        if arm_obj.data.bones.get('Eye_L') and arm_obj.data.bones.get('Eye_R') :
+            if self.fix_eye_shapekeys(context, arm_obj):
+                # 调整骨骼变换
+                bpy.ops.object.mode_set(mode='EDIT')
+                for name in ['Eye_L', 'Eye_R']:
+                    eb = ebs.get(name)
+                    if eb:
+                        eb.matrix @= mathutils.Matrix.Rotation(math.radians(90), 4, 'X')
+                        eb.length *= 0.4
 
-        edit_bones = armature_obj.data.edit_bones
-        if self.fix_eye_shapekeys(context, armature_obj):
-            # 调整骨骼变换
-            bpy.ops.object.mode_set(mode='EDIT')
-            for name in ['Eye_L', 'Eye_R']:
-                eb = edit_bones.get(name)
-                if eb:
-                    eb.matrix @= mathutils.Matrix.Rotation(math.radians(90), 4, 'X')
-                    eb.length *= 0.4
+            # 设置驱动器
+            drivers = [
+                ("Eye_L(L)", "Eye_L", 'ROT_Z', -1), 
+                ("Eye_L(R)", "Eye_L", 'ROT_Z',  1), 
+                ("Eye_L(U)", "Eye_L", 'ROT_X', -1), 
+                ("Eye_L(D)", "Eye_L", 'ROT_X',  1), 
+                ("Eye_R(L)", "Eye_R", 'ROT_Z', -1), 
+                ("Eye_R(R)", "Eye_R", 'ROT_Z',  1), 
+                ("Eye_R(U)", "Eye_R", 'ROT_X', -1), 
+                ("Eye_R(D)", "Eye_R", 'ROT_X',  1), 
+            ]
 
-            for name in ["Toe_offset_L", "Toe_offset_R"]:
-                eb = edit_bones.get(name)
-                if eb:
-                    eb.matrix @= mathutils.Matrix.Rotation(math.radians(90), 4, 'X')
+            kb_data = arm_obj.children[0].data.shape_keys.key_blocks
 
-            for name in ['Ear_03_L', 'Ear_03_R', 'Index_03_L', 'Middle_03_L', 'Pinky_03_L', 'Ring_03_L', 'Thumb_03_L', 'Index_03_R', 'Middle_03_R', 'Pinky_03_R', 'Ring_03_R', 'Thumb_03_R', 'Sp_Hi_Tail0_B_04']:
-                eb = edit_bones.get(name)
-                if eb and eb.parent:
-                    eb.tail = eb.head + eb.parent.tail - eb.parent.head
+            for sk_name, bone_name, axis, direction in drivers:
+                # 检查形态键是否存在
+                if sk_name not in kb_data:
+                    continue
+                
+                shape_key = kb_data[sk_name]
+                # 移除驱动器
+                shape_key.driver_remove("value")
+                # 添加驱动器
+                drv = shape_key.driver_add("value").driver
+                drv.type = 'SCRIPTED'
+                # 创建骨骼旋转的变量 
+                var = drv.variables.new()
+                var.type = 'TRANSFORMS'
+                target = var.targets[0]
+                target.id = arm_obj
+                target.bone_target = bone_name
+                target.transform_type = axis
+                target.transform_space = 'LOCAL_SPACE'
+                # 驱动器表达式
+                drv.expression = f"{var.name} * {direction}  * 1.5"
 
         # 连接骨骼
-        connect_bones = ['Head', 'Neck', 'Chest', 'Spine', 'Arm_L', 'Elbow_L', 'Arm_R', 'Elbow_R', 'Knee_L', 'Knee_R', 'Index_02_L', 'Index_03_L', 'Middle_02_L', 'Middle_03_L', 'Pinky_02_L', 'Pinky_03_L', 'Ring_02_L', 'Ring_03_L', 'Thumb_02_L', 'Thumb_03_L', 'Index_02_R', 'Index_03_R', 'Middle_02_R', 'Middle_03_R', 'Pinky_02_R', 'Pinky_03_R', 'Ring_02_R', 'Ring_03_R', 'Thumb_02_R', 'Thumb_03_R']
+        connect_bones = ['Head', 'Neck', 'Chest', 'Spine', 'Elbow_L', 'Elbow_R', 'Knee_L', 'Knee_R', 'Index_02_L', 'Index_03_L', 'Middle_02_L', 'Middle_03_L', 'Pinky_02_L', 'Pinky_03_L', 'Ring_02_L', 'Ring_03_L', 'Thumb_02_L', 'Thumb_03_L', 'Index_02_R', 'Index_03_R', 'Middle_02_R', 'Middle_03_R', 'Pinky_02_R', 'Pinky_03_R', 'Ring_02_R', 'Ring_03_R', 'Thumb_02_R', 'Thumb_03_R']
         for b in connect_bones:
-            if b in edit_bones:
-                edit_bones[b].use_connect = True
+            if b in ebs:
+                ebs[b].use_connect = True
 
         # 隐藏骨骼
         bpy.ops.object.mode_set(mode='POSE')
-        hidden_bones = ['Ankle_L', 'Toe_L', 'Ankle_R', 'Toe_R', 'Hand_Attach_L', 'Hand_Attach_R', 'UpBody_Ctrl']
+        hidden_bones = ['Ankle_offset_L', 'Toe_offset_L', 'Ankle_offset_R', 'Toe_offset_R', 'Hand_Attach_L', 'Hand_Attach_R', 'UpBody_Ctrl']
         for b in hidden_bones:
-            pbone = armature_obj.pose.bones.get(b)
-            if pbone:
-                pbone.bone.hide = True
+            pb = arm_obj.pose.bones.get(b)
+            if pb:
+                pb.bone.hide = True
 
-        if armature_obj.mode != original_mode:
+        if arm_obj.mode != original_mode:
             bpy.ops.object.mode_set(mode=original_mode)
 
-        self.report({'INFO'}, "Refine the bone successfully")
+        self.report({'INFO'}, "Refine the skeleton successfully")
         return {'FINISHED'}
 
     def fix_eye_shapekeys(self, context, armature_obj):
@@ -541,42 +560,7 @@ class RefineBoneStructure(bpy.types.Operator):
         if kb_data.get('Basis.001'):
                 mesh_obj.shape_key_remove(kb_data.get('Basis.001'))
 
-        # 驱动器
-        drivers = [
-            ("Eye_L(L)", "Eye_L", 'ROT_Z', -1), 
-            ("Eye_L(R)", "Eye_L", 'ROT_Z',  1), 
-            ("Eye_L(U)", "Eye_L", 'ROT_X', -1), 
-            ("Eye_L(D)", "Eye_L", 'ROT_X',  1), 
-            ("Eye_R(L)", "Eye_R", 'ROT_Z', -1), 
-            ("Eye_R(R)", "Eye_R", 'ROT_Z',  1), 
-            ("Eye_R(U)", "Eye_R", 'ROT_X', -1), 
-            ("Eye_R(D)", "Eye_R", 'ROT_X',  1), 
-        ]
-
-        for sk_name, bone_name, axis, direction in drivers:
-            # 检查形态键是否存在
-            if sk_name not in kb_data:
-                print(f"Skipping driver for missing key: {sk_name}")
-                continue
-            
-            shape_key = kb_data[sk_name]
-            # 移除驱动器
-            shape_key.driver_remove("value")
-            # 添加驱动器
-            drv = shape_key.driver_add("value").driver
-            drv.type = 'SCRIPTED'
-            # 创建骨骼旋转的变量 
-            var = drv.variables.new()
-            var.type = 'TRANSFORMS'
-            target = var.targets[0]
-            target.id = armature_obj
-            target.bone_target = bone_name
-            target.transform_type = axis
-            target.transform_space = 'LOCAL_SPACE'
-            # 驱动器表达式
-            drv.expression = f"{var.name} * {direction}  * 1.5"
-
-        # 顶点组
+        # 删除顶点组
         for eye_bone in vgroup_names:
             if eye_bone in mesh_obj.vertex_groups and "Head" in mesh_obj.vertex_groups:
                 # 使用修改器合并权重
@@ -596,226 +580,127 @@ class RefineBoneStructure(bpy.types.Operator):
 
         bpy.ops.object.mode_set(mode='EDIT')
         bpy.ops.object.mode_set(mode='OBJECT')
-        bpy.ops.object.select_all(action='DESELECT')
         context.view_layer.objects.active = armature_obj
         return True
    
-class FixBlush(bpy.types.Operator):
-    '''Fix blush of mini umamusume model'''
-    bl_idname = "miniuma.fixblush"
-    bl_label = "Fix Blush"
+class FixMini(bpy.types.Operator):
+    '''Fix mini umamusume model'''
+    bl_idname = "uma.fixmini"
+    bl_label = "Fix mini umamusume model"
     bl_options = {'REGISTER', 'UNDO'}
 
     @classmethod
     def poll(cls, context: bpy.types.Context):
-        return context.selected_objects and context.active_object.type == 'MESH' and context.active_object.mode == 'OBJECT' and len(context.selected_objects) == 1
+        return context.active_object and context.active_object.type == 'MESH' and context.active_object.mode == 'OBJECT' and len(context.selected_objects) == 1
 
     def execute(self, context: bpy.types.Context):
         
-        # 将其中名为cheek材质所对应的顶点删除
-        obj = context.active_object
-        mesh = obj.data
+        bpy.ops.mmd_tools.separate_by_materials()
+        mesh_objs = context.selected_objects
+        for obj in mesh_objs:
+            obj.select_set(False)
 
-        # 查找名为cheek的材质索引
-        cheek_mat_index = None
-        for idx, mat in enumerate(mesh.materials):
-            if mat and "cheek" in mat.name:
-                cheek_mat_index = idx
-                break
-
-        if cheek_mat_index is None:
-            self.report({'WARNING'}, "Blush already fixed or you chose an illegal model")
-            return {'CANCELLED'}
-
-        # 找到所有属于cheek材质的顶点
-        verts_to_delete = set()
-        for poly in mesh.polygons:
-            if poly.material_index == cheek_mat_index:
-                verts_to_delete.update(poly.vertices)
-
-        # 进入编辑模式，选中并删除这些顶点
-        bpy.ops.object.mode_set(mode='EDIT')
-        bm = bmesh.from_edit_mesh(mesh)
-        bm.verts.ensure_lookup_table()
-        for v in bm.verts:
-            v.select = False
-        for idx in verts_to_delete:
-            if idx < len(bm.verts):
-                bm.verts[idx].select = True
-        bmesh.update_edit_mesh(mesh)
-        bpy.ops.mesh.delete(type='VERT')
+        self.fixblush(mesh_objs)
+        self.fixnormal(mesh_objs, context)
+        self.fixuv(context)
         bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.ops.mmd_tools.separate_by_materials()
+        bpy.ops.object.select_all()
 
-        # 删除名为cheek的材质
-        mesh.materials.pop(index=cheek_mat_index)
-
-        # 查找名为face0的材质索引
-        cheek_mat_index = None
-        for idx, mat in enumerate(mesh.materials):
-            if mat and "face0" in mat.name:
-                cheek_mat_index = idx
-                break
-
-        if cheek_mat_index is None:
-            self.report({'ERROR'}, "Face material not found")
-            return {'CANCELLED'}
-        
-        # 在face0材质中增添一个图像纹理节点
-        mat = mesh.materials[cheek_mat_index]
-
-        nodes = mat.node_tree.nodes
-
-        # for node in nodes:
-        #     print("Node name:", node.name)
-
-        for node in nodes:
-            if node.type == 'TEX_IMAGE':
-                image_tex_node = node
-                break
-        image_tex_node = nodes.new(type='ShaderNodeTexImage')
-        image_tex_node.label = "Blushed Face Texture"
-        image_tex_node.name = "Blushed Face Texture"
-        image_tex_node.location = (-830, 950)
-
-        # 在face0材质中增添一个混合颜色节点
-        mix_node = nodes.new(type='ShaderNodeMixRGB')
-        mix_node.label = "Blush level"
-        mix_node.name = "Blush level"
-        mix_node.location = (-500, 1100)
-        mix_node.inputs['Fac'].default_value = 1.0
-
-        # 查找节点
-        for node in nodes:
-            if 'mmd_base' in node.name:
-                mmd_base_tex_node = node
-                break
-        for node in nodes:
-            if 'mmd_sh' in node.name:
-                mmd_sh_node = node
-                break
-        
-        # 连接节点
-        mat.node_tree.links.new(mmd_base_tex_node.outputs['Color'], mix_node.inputs['Color1'])
-        mat.node_tree.links.new(image_tex_node.outputs['Color'], mix_node.inputs['Color2'])
-        mat.node_tree.links.new(mix_node.outputs['Color'], mmd_sh_node.inputs['Base Tex'])
-
-        # 加载纹理图片
-        script_file = os.path.realpath(__file__)
-        script_dir = os.path.dirname(script_file)
-        blush_texture_path = os.path.join(script_dir, "tex_mchr0001_00_faceblush0_1_diff.png")
-        
-        try:
-            if os.path.exists(blush_texture_path):
-                # 检查是否已存在同名图片
-                existing_image = bpy.data.images.get("tex_mchr0001_00_faceblush0_1_diff.png")
-                if existing_image:
-                    image_tex_node.image = existing_image
-                else:
-                    # 加载新图片
-                    image = bpy.data.images.load(blush_texture_path)
-                    image_tex_node.image = image
-                self.report({'INFO'}, "Blush texture loaded successfully")
-            else:
-                self.report({'WARNING'}, f"Blush texture not found at: {blush_texture_path}")
-        except Exception as e:
-            self.report({'ERROR'}, f"Failed to load blush texture: {str(e)}")
-            return {'CANCELLED'}
-
-        bpy.ops.file.pack_all()
-
-        self.report({'INFO'}, "Blush fixed successfully")
+        self.report({'INFO'}, "Mini umamusume model fixed")
         return {'FINISHED'}
 
-class FixNormal(bpy.types.Operator):
-    '''Fix normals of mini umamusume model'''
-    bl_idname = "miniuma.fixnormal"
-    bl_label = "Fix Normals"
-    bl_options = {'REGISTER', 'UNDO'}
+    def fixblush(self, mesh_objs):
+        # 查找以_cheek结尾的网格对象
+        cheek_obj = None
+        for obj in mesh_objs:
+            if obj.type == 'MESH' and '_cheek' in obj.name:
+                cheek_obj = obj
+                break
 
-    @classmethod
-    def poll(cls, context: bpy.types.Context):
-        return context.selected_objects and context.active_object.type == 'MESH' and context.active_object.mode == 'OBJECT' and len(context.selected_objects) == 1
+        if cheek_obj:
+            cheek_obj.visible_shadow = False
+            # 获取第一个材质
+            if cheek_obj.data.materials:
+                mat = cheek_obj.data.materials[0]
+                nodes = mat.node_tree.nodes
 
-    def execute(self, context: bpy.types.Context):
+                multiply_node = nodes.new(type='ShaderNodeMixRGB')
+                multiply_node.blend_type = 'MULTIPLY'
+                multiply_node.inputs['Fac'].default_value = 1.0
+                multiply_node.inputs['Color2'].default_value = (1, 0.799104, 0.597202, 1)
+                multiply_node.use_clamp = True
 
-        bpy.ops.mmd_tools.separate_by_materials()
+                gradient_node = nodes.new(type='ShaderNodeValToRGB')
+                gradient_node.color_ramp.elements[0].color = (1, 1, 1, 1)
+                gradient_node.color_ramp.elements[0].position = 0.85
+                gradient_node.color_ramp.elements[1].color = (0, 0, 0, 1)
 
-        # 只保留名字以mouth结尾的mesh对象为选中状态
-        for obj in context.selected_objects:
-            if "mouth" in obj.name:
-                obj.select_set(True)
-            else:
-                obj.select_set(False)
-        
-        # 检查是否只有一个mesh对象为选中状态
-        if len(context.selected_objects) != 1:
-            bpy.ops.mmd_tools.join_meshes()
-            self.report({'ERROR'}, "There must be exactly one mouth mesh or you chose an illegal model")
-            return {'CANCELLED'}
+                # 查找基础纹理节点
+                mmd_base_tex_node = None
+                for node in nodes:
+                    if 'mmd_base' in node.name:
+                        mmd_base_tex_node = node
+                        break
+                if mmd_base_tex_node:
+                    mmd_base_tex_node.image.alpha_mode = 'PREMUL'
+                    mat.node_tree.links.new(mmd_base_tex_node.outputs['Color'], multiply_node.inputs['Color1'])
+                    mat.node_tree.links.new(mmd_base_tex_node.outputs['Color'], gradient_node.inputs['Fac'])
 
-        # 将现在的选中项设置为活动项
-        if context.selected_objects:
-            context.view_layer.objects.active = context.selected_objects[0]
-        
+                # 查找MMD着色器节点
+                mmd_shader_node = None
+                for node in nodes:
+                    if 'mmd_sh' in node.name:
+                        mmd_shader_node = node
+                        break
+                if mmd_base_tex_node:
+                    mat.node_tree.links.new(multiply_node.outputs['Color'], mmd_shader_node.inputs['Base Tex'])
+                    mat.node_tree.links.new(gradient_node.outputs['Color'], mmd_shader_node.inputs['Base Alpha'])
+        else:
+            print("ERROR: cheek object not found in mini umamusume model")
+
+    def fixnormal(self, mesh_objs, context):
+        # 设置mouth对象为活动项
+        mouth_obj= None
+        for obj in mesh_objs:
+            if obj.type == 'MESH' and '_mouth' in obj.name:
+                mouth_obj = obj
+                break
+
+        # 进入编辑模式，全选顶点，按松散块分离
+        context.view_layer.objects.active = mouth_obj
         bpy.ops.object.mode_set(mode='EDIT')
-
-        # 全选顶点，按松散块分离
         bpy.ops.mesh.select_all(action='SELECT')
         bpy.ops.mesh.separate(type='LOOSE')
+
+        # 删除
         bpy.ops.object.mode_set(mode='OBJECT')
+        bpy.data.objects.remove(context.selected_objects[-1], do_unlink=True)
 
-        print(bpy.app.version_string)
-
-        if len(context.selected_objects) == 2:
-            bpy.data.objects.remove(context.selected_objects[-1], do_unlink=True)
-            vertices_to_select = [67, 68, 77, 78, 79, 80, 81, 82, 84, 94, 102, 103, 105, 107, 121, 122, 123, 124, 125, 127, 128, 131, 133, 134, 159, 164, 166, 167, 209, 212, 213, 216, 217, 222, 224, 231, 256, 257, 261, 262, 263, 267, 269, 374, 375, 377, 378, 379, 380, 382]
-        else:
-            if context.selected_objects[0].parent:
-                for obj in context.selected_objects[0].parent.children:
-                    obj.select_set(True)
-                bpy.ops.object.join()
-            self.report({'WARNING'}, "Normals already fixed or you chose an illegal model")
-            return {'CANCELLED'}
-
-        # 选中选中项同一父级下的eye和face对象
-        if context.selected_objects[0].parent:
-            for obj in context.selected_objects[0].parent.children:
-                if "face0" in obj.name or "eye" in obj.name:
-                    obj.select_set(True)
-                else:
-                    obj.select_set(False)
-
-        # 将face对象设定为活动项
-        context.view_layer.objects.active = context.selected_objects[-1]
-
+        # 合并eye和face对象
+        for obj in mesh_objs:
+            if obj.type == 'MESH' and '_eye' in obj.name:
+                obj.select_set(True)
+            if obj.type == 'MESH' and '_face0' in obj.name:
+                context.view_layer.objects.active = obj
+                obj.select_set(True)
         bpy.ops.object.join()
-        obj = bpy.context.active_object
+        face_obj = context.active_object
+
+        # 删除顶点
         bpy.ops.object.mode_set(mode="EDIT")
-        
-        # 选中顶点
-        mesh = bmesh.from_edit_mesh(obj.data)
+        mesh = bmesh.from_edit_mesh(face_obj.data)
         mesh.verts.ensure_lookup_table()
-
-        for v in mesh.verts:
-            v.select = False
-        for index in vertices_to_select:
+        verts_to_del = [67, 68, 77, 78, 79, 80, 81, 82, 84, 94, 102, 103, 105, 107, 121, 122, 123, 124, 125, 127, 128, 131, 133, 134, 159, 164, 166, 167, 209, 212, 213, 216, 217, 222, 224, 231, 256, 257, 261, 262, 263, 267, 269, 374, 375, 377, 378, 379, 380, 382]
+        for index in verts_to_del:
+            if index < len(mesh.verts):
                 mesh.verts[index].select = True
-        bmesh.update_edit_mesh(obj.data)
-
-        # 删除选中的顶点
+        bmesh.update_edit_mesh(face_obj.data)
         bpy.ops.mesh.delete(type='VERT')
-
         bpy.ops.object.mode_set(mode='OBJECT')
 
-        # 选中选中项同一父级下的mouth和face对象
-        if context.selected_objects[0].parent:
-            for obj in context.selected_objects[0].parent.children:
-                if "face0" in obj.name or "mouth" in obj.name:
-                    obj.select_set(True)
-                else:
-                    obj.select_set(False)
-        if context.selected_objects:
-            context.view_layer.objects.active = context.selected_objects[0]
+        # 合并mouth和face对象
+        mouth_obj.select_set(True)
         bpy.ops.object.join()
 
         # 按距离合并顶点
@@ -823,25 +708,19 @@ class FixNormal(bpy.types.Operator):
         bpy.ops.mesh.select_all(action='SELECT')
         bpy.ops.mesh.remove_doubles(threshold=0.0001)
 
-        # 重新计算法向（外侧）
+        # 重新计算外侧法向
         bpy.ops.mesh.normals_make_consistent(inside=False)
 
         # 平滑矢量
         bpy.ops.mesh.smooth_normals()
 
-        bpy.ops.object.mode_set(mode='OBJECT')
+    def fixuv(self, context):
 
-        # 选中选中项同一父级下的对象并合并
-        if context.selected_objects[0].parent:
-            for obj in context.selected_objects[0].parent.children:
-                obj.select_set(True)
-            bpy.ops.object.join()
-
-        obj = context.active_object        
+        face_obj = context.active_object       
 
         # 查找mouth材质的索引
         mouth_mat_index = None
-        for idx, mat in enumerate(obj.data.materials):
+        for idx, mat in enumerate(face_obj.data.materials):
             if mat and "mouth" in mat.name:
                 mouth_mat_index = idx
                 break
@@ -850,23 +729,17 @@ class FixNormal(bpy.types.Operator):
             self.report({'ERROR'}, "Mouth material not found")
             return {'CANCELLED'}
         
-        # 选择指定材质的面
-        bpy.ops.object.mode_set(mode='EDIT')
-        bpy.ops.mesh.select_all(action='DESELECT')
-        bpy.ops.object.mode_set(mode='OBJECT')
-        for poly in obj.data.polygons:
-            poly.select = (poly.material_index == mouth_mat_index)        
-        
-        # 选择UV
-        bpy.ops.object.mode_set(mode='EDIT')
-        bpy.ops.uv.select_all(action='SELECT')
-
-        bm = bmesh.from_edit_mesh(obj.data)
+        bm = bmesh.from_edit_mesh(face_obj.data)
         uv_layer = bm.loops.layers.uv.active
         
         if not uv_layer:
             self.report({'ERROR'}, "No active UV layer found")
             return {'CANCELLED'}
+
+        # 选择指定材质的面
+        bpy.ops.mesh.select_all(action='DESELECT')
+        for face in bm.faces:
+            face.select = (face.material_index == mouth_mat_index)     
         
         # 变换UV
         for face in bm.faces:
@@ -876,11 +749,9 @@ class FixNormal(bpy.types.Operator):
                     loop[uv_layer].uv.x -= 0.804
                     loop[uv_layer].uv.x *= 1.8
 
-        bpy.ops.mesh.select_all(action='DESELECT')
-        bpy.ops.object.mode_set(mode='OBJECT')
-
-        self.report({'INFO'}, "Normals fixed successfully")
-        return {'FINISHED'}
+        for face in bm.faces:
+            face.select = False
+        bmesh.update_edit_mesh(face_obj.data)
 
 class ChangeHeadPretreat(bpy.types.Operator):
     '''Make the umamusume model more suitable for the production of change-head secondary creation'''
@@ -906,11 +777,12 @@ class ChangeHeadPretreat(bpy.types.Operator):
             return {'CANCELLED'}
         
         # 选中Head骨并切断
-        bpy.ops.object.mode_set(mode='POSE')
-        bpy.ops.armature.collection_show_all()
         head_bone = orig_arm.pose.bones.get("Head")
         if head_bone:
-            head_bone.bone.select = True
+            bpy.ops.object.mode_set(mode='POSE')
+            bpy.ops.armature.collection_show_all()
+            bpy.ops.pose.select_all(action='DESELECT')
+            orig_arm.data.bones.active = head_bone.bone
             bpy.ops.mmd_tools.model_separate_by_bones(separate_armature=True, include_descendant_bones=True, boundary_joint_owner='DESTINATION')
         else:
             self.report({'ERROR'}, "Head bone not found")
@@ -918,7 +790,8 @@ class ChangeHeadPretreat(bpy.types.Operator):
 
         # 删除原物体并重命名
         new_empty = context.active_object
-        bpy.data.objects.remove(orig_arm.children[0], do_unlink=True)
+        for c in orig_arm.children:
+            bpy.data.objects.remove(c, do_unlink=True)
         bpy.data.objects.remove(orig_arm, do_unlink=True)
         bpy.data.objects.remove(orig_empty, do_unlink=True)
         new_empty.name = empty_name
@@ -930,14 +803,14 @@ class ChangeHeadPretreat(bpy.types.Operator):
         context.view_layer.objects.active = new_empty.children[0]
         bpy.ops.uma.set_bone_collections()
         attrs = ['del_handle', 'del_face', 'del_others']
-        orig = [getattr(context.scene, attr) for attr in attrs]
+        orig = [getattr(context.scene.uma_scene, attr) for attr in attrs]
         try:
             for attr in attrs:
-                setattr(context.scene, attr, True)
+                setattr(context.scene.uma_scene, attr, True)
             bpy.ops.uma.simplify_armature()
         finally:
             for attr, val in zip(attrs, orig):
-                setattr(context.scene, attr, val)
+                setattr(context.scene.uma_scene, attr, val)
         bpy.ops.uma.generate_ik()
         bpy.ops.object.mode_set(mode=current_mode)
         return {'FINISHED'}
@@ -1038,9 +911,9 @@ class ChangeHeadHoldout(bpy.types.Operator):
         self.report({'INFO'}, "Grig generated successfully")
         return {'FINISHED'}
     
-class ChangeHeadNewShapeOperator(bpy.types.Operator):
+class ChangeHeadNewShape(bpy.types.Operator):
     '''From basis'''
-    bl_idname = "object.uma_changeheadnewshape_ops"
+    bl_idname = "uma.changehead_newshape"
     bl_label = "New"
     bl_options = {'REGISTER', 'UNDO'}
 
@@ -1086,9 +959,9 @@ class ChangeHeadNewShapeOperator(bpy.types.Operator):
         self.report({'INFO'}, f"New shapekey generated successfully with eval_time set to {new_key.frame}")
         return {'FINISHED'}
     
-class ChangeHeadCopyShapeOperator(bpy.types.Operator):
+class ChangeHeadCopyShape(bpy.types.Operator):
     '''From active shape key'''
-    bl_idname = "object.uma_changeheadcopyshape_ops"
+    bl_idname = "uma.changehead_copyshape"
     bl_label = "Copy"
     bl_options = {'REGISTER', 'UNDO'}
 
