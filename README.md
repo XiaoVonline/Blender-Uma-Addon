@@ -61,13 +61,13 @@ mmd_tools的导入功能。
 仅适配我提供的umaviewer导出的模型。为选中模型的ShoulderRoll和ArmRoll添加约束，自动调整其朝向。  
 请不要在使用MMR控制器或者其他已经有自动捩骨功能的控制器的情况下再启用此功能。
 
-**生成 IK**  
+**生成 IK Generate IK**  
 仅适配我提供的umaviewer导出的模型。为选中模型生成简单的IK控制器。
 
-**烘焙 FK 到 IK**  
+**烘焙 FK 到 IK Bake FK to IK**  
 在场景帧范围内，把选中模型原本就有的FK动作烘焙到上述 *生成 IK* 操作生成的IK控制器上。
 
-**为赛马娘 For Umamusume**  
+**为赛马娘生成控制器 Generate controller for umamusume**  
 如果你安装了MikuMikuRig 4.5-2.00 LTS，在MMR的主面板下就会出现这个按钮，点击后可以直接为赛马娘生成控制器。
 如果你先安装此插件，后安装MMR，需要重启此插件，这个按钮才能显示。
 >https://github.com/XiaoFFGe/MikuMikuRig  
