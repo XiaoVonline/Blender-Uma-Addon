@@ -64,7 +64,6 @@ class MarkCollectionCenter(bpy.types.Operator):
         return {'FINISHED'}
     
 class PrintSelectedVertices(bpy.types.Operator):
-    '''Print selected vertex indexes to the console'''
     bl_idname = "uma.print_selected_vertices"
     bl_label = "Print Vertex Indexes"
     bl_options = {'REGISTER'}
@@ -75,19 +74,59 @@ class PrintSelectedVertices(bpy.types.Operator):
         return obj and obj.type == 'MESH' and obj.mode == 'EDIT'
 
     def execute(self, context):
-
         obj = context.active_object
         bm = bmesh.from_edit_mesh(obj.data)
         selected_indices = [v.index for v in bm.verts if v.select]
-
         if not selected_indices:
             self.report({'WARNING'}, "No vertices selected")
             return {'CANCELLED'}
-
         print("Selected vertex indices:", selected_indices)
         self.report({'INFO'}, f"Printed {len(selected_indices)} vertex indexes to console")
         return {'FINISHED'}
-    
+
+class PrintSelectedEdges(bpy.types.Operator):
+    bl_idname = "uma.print_selected_edges"
+    bl_label = "Print Edge Indexes"
+    bl_options = {'REGISTER'}
+
+    @classmethod
+    def poll(cls, context):
+        obj = context.active_object
+        return obj and obj.type == 'MESH' and obj.mode == 'EDIT'
+
+    def execute(self, context):
+        obj = context.active_object
+        bm = bmesh.from_edit_mesh(obj.data)
+        selected_indices =[e.index for e in bm.edges if e.select]
+        if not selected_indices:
+            self.report({'WARNING'}, "No edges selected")
+            return {'CANCELLED'}
+        print("Selected edge indices:", selected_indices)
+        self.report({'INFO'}, f"Printed {len(selected_indices)} edge indexes to console")
+        return {'FINISHED'}
+
+class PrintSelectedFaces(bpy.types.Operator):
+    '''Print selected face indexes to the console'''
+    bl_idname = "uma.print_selected_faces"
+    bl_label = "Print Face Indexes"
+    bl_options = {'REGISTER'}
+
+    @classmethod
+    def poll(cls, context):
+        obj = context.active_object
+        return obj and obj.type == 'MESH' and obj.mode == 'EDIT'
+
+    def execute(self, context):
+        obj = context.active_object
+        bm = bmesh.from_edit_mesh(obj.data)
+        selected_indices =[f.index for f in bm.faces if f.select]
+        if not selected_indices:
+            self.report({'WARNING'}, "No faces selected")
+            return {'CANCELLED'}
+        print("Selected face indices:", selected_indices)
+        self.report({'INFO'}, f"Printed {len(selected_indices)} face indexes to console")
+        return {'FINISHED'}
+
 class PrintSelectedBones(bpy.types.Operator):
     '''Print selected bones to the console'''
     bl_idname = "uma.print_selected_bones"

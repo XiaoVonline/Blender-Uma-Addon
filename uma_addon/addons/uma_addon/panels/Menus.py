@@ -1,5 +1,5 @@
 from ..config import __addon_name__
-from ..operators.AddonOperators2 import SelectUnassignedMeshes, MarkCollectionCenter, PrintSelectedVertices, PrintSelectedBones, PrintAllBones, MeshToPython, CombineShapekeys, SyncShapekeys, RemoveBoneConstraints
+from ..operators.AddonOperators2 import SelectUnassignedMeshes, MarkCollectionCenter, PrintSelectedVertices, PrintSelectedEdges, PrintSelectedFaces, PrintSelectedBones, PrintAllBones, MeshToPython, CombineShapekeys, SyncShapekeys, RemoveBoneConstraints
 from ..operators.Controller import MMRRig
 from ..operators.TanukiNodes import Tanuki_Texture, Tanuki_Switch
 from ....common.i18n.i18n import i18n
@@ -21,6 +21,8 @@ def View3dEdit_menu(self, context):
     if prefs.debug:
         self.layout.separator()
         self.layout.operator(PrintSelectedVertices.bl_idname)
+        self.layout.operator(PrintSelectedEdges.bl_idname)
+        self.layout.operator(PrintSelectedFaces.bl_idname)
 
 def View3dPose_menu(self, context):
     prefs = context.preferences.addons[__addon_name__].preferences
